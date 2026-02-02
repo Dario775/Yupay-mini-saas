@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User, UserRole, Subscription, Store, RegisterStoreData } from '@/types';
 import type { Session, AuthError } from '@supabase/supabase-js';
 
@@ -13,9 +13,25 @@ interface AuthContextType {
   register: (data: RegisterStoreData) => Promise<{ user: User; store: Store; subscription: Subscription }>;
   isLoading: boolean;
   authError: string | null;
+  isDemoMode: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Usuarios demo para cuando Supabase no está configurado
+const DEMO_USERS: Record<string, { user: User; store?: Store; subscription?: Subscription }> = {
+  'admin@minisaas.com': {
+    user: { id: '1', email: 'admin@minisaas.com', name: 'Admin Demo', role: 'admin', createdAt: new Date(), isActive: true },
+  },
+  'cliente@demo.com': {
+    user: { id: '2', email: 'cliente@demo.com', name: 'Cliente Demo', role: 'cliente', createdAt: new Date(), isActive: true },
+  },
+  'tienda@demo.com': {
+    user: { id: '3', email: 'tienda@demo.com', name: 'Tienda Demo', role: 'tienda', createdAt: new Date(), isActive: true },
+    store: { id: 'store1', ownerId: '3', name: 'TechStore Demo', description: 'Tienda de prueba', category: 'Tecnología', address: 'Demo 123', phone: '+54 11 1234', email: 'tienda@demo.com', isActive: true, rating: 4.5, createdAt: new Date() },
+    subscription: { id: 'sub1', userId: '3', storeId: 'store1', plan: 'profesional', status: 'trial', startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), price: 0, autoRenew: true, salesThisMonth: 0, lastResetDate: new Date() },
+  },
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -24,10 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [store, setStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const isDemoMode = !isSupabaseConfigured;
 
   // Cargar sesión existente al iniciar
   useEffect(() => {
     const initAuth = async () => {
+      // Si está en modo demo, no intentar cargar sesión de Supabase
+      if (isDemoMode) {
+        console.log('🎮 Modo DEMO activado - Supabase no configurado');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // Obtener sesión actual
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -156,10 +180,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = useCallback(async (email: string, password: string, _role?: UserRole) => {
+  const login = useCallback(async (email: string, password: string, role?: UserRole) => {
     setIsLoading(true);
     setAuthError(null);
 
+    // Modo DEMO: usar usuarios locales
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay
+
+      const demoData = DEMO_USERS[email];
+      if (demoData && (!role || demoData.user.role === role)) {
+        setUser(demoData.user);
+        setStore(demoData.store || null);
+        setSubscription(demoData.subscription || null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Crear usuario temporal para cualquier email en demo
+      const tempUser: User = {
+        id: Math.random().toString(36).substr(2, 9),
+        email,
+        name: email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        role: role || 'cliente',
+        createdAt: new Date(),
+        isActive: true,
+      };
+      setUser(tempUser);
+      setIsLoading(false);
+      return;
+    }
+
+    // Modo producción: usar Supabase
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -189,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
   const register = useCallback(async (data: RegisterStoreData): Promise<{ user: User; store: Store; subscription: Subscription }> => {
     setIsLoading(true);
@@ -361,6 +413,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     isLoading,
     authError,
+    isDemoMode,
   };
 
   return (
