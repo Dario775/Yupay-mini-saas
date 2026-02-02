@@ -262,7 +262,13 @@ export function useAdminData() {
 
 // Hook para Cliente
 export function useClientData(userId: string) {
-  const [orders, setOrders] = useState<Order[]>(DEMO_ORDERS.filter(o => o.customerId === userId));
+  // Solo cargar datos demo para usuarios demo existentes
+  // Usuarios nuevos empiezan sin órdenes
+  const isDemoUser = ['2', '4'].includes(userId); // IDs de usuarios demo tipo cliente
+
+  const [orders, setOrders] = useState<Order[]>(
+    isDemoUser ? DEMO_ORDERS.filter(o => o.customerId === userId) : []
+  );
   const [products] = useState<Product[]>(DEMO_PRODUCTS);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [stores] = useState<Store[]>(DEMO_STORES.filter(s => s.isActive));
@@ -288,13 +294,25 @@ export function useClientData(userId: string) {
 
 // Hook para Tienda - Con lógica de límites
 export function useStoreData(storeId: string) {
-  const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS.filter(p => p.storeId === storeId));
-  const [orders, setOrders] = useState<Order[]>(DEMO_ORDERS.filter(o => o.storeId === storeId));
-  const [subscription, setSubscription] = useState<Subscription | null>(DEMO_SUBSCRIPTIONS.find(s => s.storeId === storeId) || null);
+  // Solo cargar datos demo para las tiendas demo existentes (store1, store2, store3)
+  // Tiendas nuevas empiezan vacías
+  const isDemoStore = ['store1', 'store2', 'store3'].includes(storeId);
+
+  const [products, setProducts] = useState<Product[]>(
+    isDemoStore ? DEMO_PRODUCTS.filter(p => p.storeId === storeId) : []
+  );
+  const [orders, setOrders] = useState<Order[]>(
+    isDemoStore ? DEMO_ORDERS.filter(o => o.storeId === storeId) : []
+  );
+  const [subscription, setSubscription] = useState<Subscription | null>(
+    DEMO_SUBSCRIPTIONS.find(s => s.storeId === storeId) || null
+  );
 
   // Store State
-  const [store, setStore] = useState<Store | undefined>(DEMO_STORES.find(s => s.id === storeId));
+  const demoStore = DEMO_STORES.find(s => s.id === storeId);
+  const [store, setStore] = useState<Store | undefined>(demoStore);
 
+  // Tiendas nuevas empiezan sin métodos de envío/pago configurados
   const [shippingMethods, setShippingMethods] = useState(store?.shippingMethods || []);
   const [paymentMethods, setPaymentMethods] = useState(store?.paymentMethods || []);
 
