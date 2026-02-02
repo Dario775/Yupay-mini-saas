@@ -19,19 +19,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Usuarios demo para cuando Supabase no está configurado
+// Lista de emails autorizados como admin (sincronizada con App.tsx)
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dario775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
+
+// Detectar si un email es de admin
+const isAdminEmail = (email: string) => ADMIN_EMAILS.includes(email.toLowerCase());
+
+// Usuarios demo para cuando Supabase no está configurado (SIN datos precargados)
 const DEMO_USERS: Record<string, { user: User; store?: Store; subscription?: Subscription }> = {
-  'admin@minisaas.com': {
-    user: { id: '1', email: 'admin@minisaas.com', name: 'Admin Demo', role: 'admin', createdAt: new Date(), isActive: true },
-  },
-  'cliente@demo.com': {
-    user: { id: '2', email: 'cliente@demo.com', name: 'Cliente Demo', role: 'cliente', createdAt: new Date(), isActive: true },
-  },
-  'tienda@demo.com': {
-    user: { id: '3', email: 'tienda@demo.com', name: 'Tienda Demo', role: 'tienda', createdAt: new Date(), isActive: true },
-    store: { id: 'store1', ownerId: '3', name: 'TechStore Demo', description: 'Tienda de prueba', category: 'Tecnología', address: 'Demo 123', phone: '+54 11 1234', email: 'tienda@demo.com', isActive: true, rating: 4.5, createdAt: new Date() },
-    subscription: { id: 'sub1', userId: '3', storeId: 'store1', plan: 'profesional', status: 'trial', startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), price: 0, autoRenew: true, salesThisMonth: 0, lastResetDate: new Date() },
-  },
+  // Solo usuarios demo básicos, sin productos ni órdenes
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -106,11 +102,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Determinar el rol: si el email está en la lista de admins, es admin
+      const effectiveRole = isAdminEmail(profile.email) ? 'admin' : (profile.role as UserRole);
+
       const loadedUser: User = {
         id: profile.id,
         email: profile.email,
         name: profile.name,
-        role: profile.role as UserRole,
+        role: effectiveRole,
         avatar: profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.email}`,
         phone: profile.phone,
         createdAt: new Date(profile.created_at),

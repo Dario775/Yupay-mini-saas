@@ -20,118 +20,20 @@ const PLAN_LIMITS = {
   empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, price: 99.99 },
 };
 
-// Datos de demostración - Usuarios
-const DEMO_USERS: User[] = [
-  { id: '1', email: 'admin@minisaas.com', name: 'Administrador General', role: 'admin', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', createdAt: new Date('2024-01-01'), isActive: true },
-  {
-    id: '2', email: 'cliente@demo.com', name: 'Juan Perez', role: 'cliente',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=cliente', createdAt: new Date('2024-06-15'), isActive: true,
-    location: { lat: -34.6037, lng: -58.3816, address: 'Microcentro, CABA', locality: 'Buenos Aires', province: 'CABA' },
-    searchRadius: 100 // 100km
-  },
-  { id: '3', email: 'tienda@demo.com', name: 'Maria Garcia', role: 'tienda', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tienda', createdAt: new Date('2024-03-20'), isActive: true },
-  {
-    id: '4', email: 'carlos@example.com', name: 'Carlos Rodriguez', role: 'cliente',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=carlos', createdAt: new Date('2024-07-10'), isActive: true,
-    location: { lat: -34.9205, lng: -57.9536, address: 'Centro, La Plata', locality: 'La Plata', province: 'Buenos Aires' },
-    searchRadius: 50 // 50km
-  },
-  { id: '5', email: 'ana@tienda.com', name: 'Ana Martinez', role: 'tienda', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ana', createdAt: new Date('2024-05-05'), isActive: false },
-  { id: '6', email: 'pedro@tienda.com', name: 'Pedro Lopez', role: 'tienda', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=pedro', createdAt: new Date('2024-08-01'), isActive: true },
-];
+// Datos de demostración - Usuarios (vacío para producción)
+const DEMO_USERS: User[] = [];
 
-// Datos de demostración - Suscripciones (con datos freemium)
-const DEMO_SUBSCRIPTIONS: Subscription[] = [
-  { id: 'sub1', userId: '3', storeId: 'store1', plan: 'profesional', status: 'trial', startDate: new Date('2024-01-01'), endDate: new Date('2025-01-01'), trialEndDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), price: 0, autoRenew: true, salesThisMonth: 3, lastResetDate: new Date() },
-  { id: 'sub2', userId: '5', storeId: 'store3', plan: 'basico', status: 'activa', startDate: new Date('2024-06-01'), endDate: new Date('2024-12-01'), price: 9.99, autoRenew: true, salesThisMonth: 42, lastResetDate: new Date() },
-  { id: 'sub3', userId: '4', storeId: 'store2', plan: 'empresarial', status: 'activa', startDate: new Date('2024-08-01'), endDate: new Date('2025-08-01'), price: 99.99, autoRenew: true, salesThisMonth: 234, lastResetDate: new Date() },
-  { id: 'sub4', userId: '6', plan: 'free', status: 'limite_alcanzado', startDate: new Date('2024-09-01'), endDate: new Date('2025-09-01'), price: 0, autoRenew: false, salesThisMonth: 5, lastResetDate: new Date() },
-];
+// Datos de demostración - Suscripciones (vacío para producción)
+const DEMO_SUBSCRIPTIONS: Subscription[] = [];
 
-// Datos de demostración - Tiendas
-const DEMO_STORES: Store[] = [
-  {
-    id: 'store1', ownerId: '3', name: 'TechStore', description: 'Los mejores productos tecnológicos',
-    category: 'Tecnología', address: 'Av. Corrientes 1234, CABA', phone: '+54 11 1234 5678',
-    email: 'contacto@techstore.com', isActive: true, rating: 4.5, createdAt: new Date('2024-03-20'),
-    subscriptionId: 'sub1',
-    location: {
-      lat: -34.6037,
-      lng: -58.3816,
-      address: 'Av. Corrientes 1234, CABA, Argentina',
-      locality: 'Buenos Aires',
-      province: 'Ciudad Autónoma de Buenos Aires'
-    },
-    shippingMethods: [
-      { id: 'ship1', name: 'Envío estándar', price: 500, estimatedDays: '5-7 días hábiles', isActive: true },
-      { id: 'ship2', name: 'Envío express', price: 1200, estimatedDays: '24-48hs', description: 'Entrega prioritaria', isActive: true },
-      { id: 'ship3', name: 'Retiro en sucursal', price: 0, estimatedDays: 'Inmediato', description: 'Retirá gratis en nuestro local', isActive: true },
-    ],
-    paymentMethods: [
-      { id: 'pay1', type: 'transferencia', name: 'Transferencia bancaria', description: 'CBU: 0000003100012345678901', instructions: 'Enviar comprobante por WhatsApp', isActive: true },
-      { id: 'pay2', type: 'mercadopago', name: 'MercadoPago', description: 'Alias: techstore.mp', instructions: 'Aceptamos todas las tarjetas', isActive: true },
-      { id: 'pay3', type: 'efectivo', name: 'Efectivo', description: 'Al retirar en sucursal', isActive: true },
-    ]
-  },
-  {
-    id: 'store2', ownerId: '4', name: 'Moda Express', description: 'Ropa de moda al mejor precio',
-    category: 'Moda', address: 'Calle 7 N° 456, La Plata', phone: '+54 11 9876 5432',
-    email: 'ventas@modaexpress.com', isActive: true, rating: 4.2, createdAt: new Date('2024-04-15'),
-    subscriptionId: 'sub3',
-    location: {
-      lat: -34.9205,
-      lng: -57.9536,
-      address: 'Calle 7 N° 456, La Plata, Argentina',
-      locality: 'La Plata',
-      province: 'Buenos Aires'
-    },
-    shippingMethods: [
-      { id: 'ship4', name: 'Envío a todo el país', price: 800, estimatedDays: '7-10 días', isActive: true },
-      { id: 'ship5', name: 'Envío CABA/GBA', price: 400, estimatedDays: '2-3 días', isActive: true },
-    ],
-    paymentMethods: [
-      { id: 'pay4', type: 'mercadopago', name: 'MercadoPago', description: 'Pagá en cuotas sin interés', isActive: true },
-      { id: 'pay5', type: 'tarjeta', name: 'Tarjeta de crédito/débito', description: 'Visa, Mastercard, Amex', isActive: true },
-    ]
-  },
-  {
-    id: 'store3', ownerId: '5', name: 'Gourmet Delicias', description: 'Comida gourmet y especialidades',
-    category: 'Gastronomía', address: 'Av. Colón 789, Córdoba Capital', phone: '+54 11 5555 1234',
-    email: 'info@gourmetdelicias.com', isActive: false, rating: 4.8, createdAt: new Date('2024-05-20'),
-    subscriptionId: 'sub2',
-    location: {
-      lat: -31.4201,
-      lng: -64.1888,
-      address: 'Av. Colón 789, Córdoba Capital, Argentina',
-      locality: 'Córdoba',
-      province: 'Córdoba'
-    },
-    shippingMethods: [
-      { id: 'ship6', name: 'Delivery zona', price: 300, estimatedDays: '30-60 min', isActive: true },
-    ],
-    paymentMethods: [
-      { id: 'pay6', type: 'efectivo', name: 'Efectivo contra entrega', isActive: true },
-      { id: 'pay7', type: 'transferencia', name: 'Transferencia', description: 'Alias: gourmet.ok', isActive: true },
-    ]
-  },
-];
+// Datos de demostración - Tiendas (vacío para producción)
+const DEMO_STORES: Store[] = [];
 
-// Datos de demostración - Productos
-const DEMO_PRODUCTS: Product[] = [
-  { id: 'prod1', storeId: 'store1', name: 'Auriculares Bluetooth', description: 'Auriculares inalámbricos con cancelación de ruido', price: 899, stock: 50, category: 'Audio', images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200'], isActive: true, createdAt: new Date('2024-05-01') },
-  { id: 'prod2', storeId: 'store1', name: 'Mouse Gamer', description: 'Mouse gaming RGB 16000 DPI', price: 599, stock: 30, category: 'Periféricos', images: ['https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=200'], isActive: true, createdAt: new Date('2024-05-15') },
-  { id: 'prod3', storeId: 'store1', name: 'Teclado Mecánico', description: 'Teclado mecánico RGB switches blue', price: 1299, stock: 8, category: 'Periféricos', images: ['https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=200'], isActive: true, createdAt: new Date('2024-06-01') },
-  { id: 'prod4', storeId: 'store2', name: 'Camisa Casual', description: 'Camisa de algodón 100%', price: 349, stock: 100, category: 'Ropa', images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200'], isActive: true, createdAt: new Date('2024-06-01') },
-  { id: 'prod5', storeId: 'store2', name: 'Jeans Premium', description: 'Jeans de alta calidad', price: 899, stock: 75, category: 'Ropa', images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?w=200'], isActive: true, createdAt: new Date('2024-06-15') },
-];
+// Datos de demostración - Productos (vacío para producción)
+const DEMO_PRODUCTS: Product[] = [];
 
-// Datos de demostración - Órdenes
-const DEMO_ORDERS: Order[] = [
-  { id: 'ord1', customerId: '2', storeId: 'store1', items: [{ productId: 'prod1', productName: 'Auriculares Bluetooth', quantity: 1, unitPrice: 899, total: 899 }], total: 899, status: 'entregado', createdAt: new Date('2024-06-15'), shippingAddress: 'Calle Cliente 789' },
-  { id: 'ord2', customerId: '2', storeId: 'store2', items: [{ productId: 'prod4', productName: 'Camisa Casual', quantity: 2, unitPrice: 349, total: 698 }], total: 698, status: 'enviado', createdAt: new Date('2024-06-20'), shippingAddress: 'Calle Cliente 789' },
-  { id: 'ord3', customerId: '4', storeId: 'store1', items: [{ productId: 'prod2', productName: 'Mouse Gamer', quantity: 1, unitPrice: 599, total: 599 }, { productId: 'prod3', productName: 'Teclado Mecánico', quantity: 1, unitPrice: 1299, total: 1299 }], total: 1898, status: 'procesando', createdAt: new Date('2024-07-01'), shippingAddress: 'Av. Carlos 123' },
-  { id: 'ord4', customerId: '2', storeId: 'store1', items: [{ productId: 'prod3', productName: 'Teclado Mecánico', quantity: 1, unitPrice: 1299, total: 1299 }], total: 1299, status: 'pendiente', createdAt: new Date('2024-07-10'), shippingAddress: 'Calle Cliente 789' },
-];
+// Datos de demostración - Órdenes (vacío para producción)
+const DEMO_ORDERS: Order[] = [];
 
 // Hook para Admin - Mejorado con métricas freemium
 export function useAdminData() {
@@ -262,16 +164,11 @@ export function useAdminData() {
 
 // Hook para Cliente
 export function useClientData(userId: string) {
-  // Solo cargar datos demo para usuarios demo existentes
-  // Usuarios nuevos empiezan sin órdenes
-  const isDemoUser = ['2', '4'].includes(userId); // IDs de usuarios demo tipo cliente
-
-  const [orders, setOrders] = useState<Order[]>(
-    isDemoUser ? DEMO_ORDERS.filter(o => o.customerId === userId) : []
-  );
-  const [products] = useState<Product[]>(DEMO_PRODUCTS);
+  // Todos los usuarios empiezan sin órdenes (datos reales vendrán de Supabase)
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products] = useState<Product[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [stores] = useState<Store[]>(DEMO_STORES.filter(s => s.isActive));
+  const [stores] = useState<Store[]>([]);
 
   const createOrder = useCallback((storeId: string, items: Order['items'], shippingAddress: string) => {
     const newOrder: Order = { id: `ord${Date.now()}`, customerId: userId, storeId, items, total: items.reduce((acc, item) => acc + item.total, 0), status: 'pendiente', createdAt: new Date(), shippingAddress };
@@ -294,25 +191,15 @@ export function useClientData(userId: string) {
 
 // Hook para Tienda - Con lógica de límites
 export function useStoreData(storeId: string) {
-  // Solo cargar datos demo para las tiendas demo existentes (store1, store2, store3)
-  // Tiendas nuevas empiezan vacías
-  const isDemoStore = ['store1', 'store2', 'store3'].includes(storeId);
+  // Todas las tiendas empiezan vacías (datos reales vendrán de Supabase)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const [products, setProducts] = useState<Product[]>(
-    isDemoStore ? DEMO_PRODUCTS.filter(p => p.storeId === storeId) : []
-  );
-  const [orders, setOrders] = useState<Order[]>(
-    isDemoStore ? DEMO_ORDERS.filter(o => o.storeId === storeId) : []
-  );
-  const [subscription, setSubscription] = useState<Subscription | null>(
-    DEMO_SUBSCRIPTIONS.find(s => s.storeId === storeId) || null
-  );
+  // Store State - undefined hasta que se cargue de Supabase
+  const [store, setStore] = useState<Store | undefined>(undefined);
 
-  // Store State
-  const demoStore = DEMO_STORES.find(s => s.id === storeId);
-  const [store, setStore] = useState<Store | undefined>(demoStore);
-
-  // Tiendas nuevas empiezan sin métodos de envío/pago configurados
+  // Métodos de envío/pago vacíos inicialmente
   const [shippingMethods, setShippingMethods] = useState(store?.shippingMethods || []);
   const [paymentMethods, setPaymentMethods] = useState(store?.paymentMethods || []);
 
