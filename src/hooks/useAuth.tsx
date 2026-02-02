@@ -399,10 +399,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthError(null);
 
     try {
+      // En producción usa la URL de Vercel, en desarrollo usa localhost
+      const redirectUrl = import.meta.env.PROD
+        ? 'https://yupay-mini-saas.vercel.app'
+        : window.location.origin;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
         },
       });
 
