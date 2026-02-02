@@ -270,10 +270,9 @@ export default function AdminDashboard() {
       const newStore = addStore({ ...newStoreForm, ownerId });
 
       // Crear suscripción con el plan seleccionado
-      const newSub = addSubscription({ userId: ownerId, storeId: newStore.id, plan: newStoreForm.plan, months: 12 });
+      addSubscription({ userId: ownerId, storeId: newStore.id, plan: newStoreForm.plan, months: 12 });
 
-      // Persistir en localStorage para que pueda loguearse
-      saveDynamicUser(newUser, newStore, newSub);
+      // Nota: con Supabase, el usuario se crea directamente en la base de datos
 
       // Mostrar credenciales
       toast.success(

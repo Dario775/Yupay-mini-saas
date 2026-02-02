@@ -1,268 +1,367 @@
-import { useState, useCallback, createContext, useContext } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { User, UserRole, Subscription, Store, RegisterStoreData } from '@/types';
+import type { Session, AuthError } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   subscription: Subscription | null;
   store: Store | null;
-  login: (email: string, password: string, role: UserRole, rememberMe?: boolean) => Promise<void>;
-  logout: () => void;
+  session: Session | null;
+  login: (email: string, password: string, role?: UserRole) => Promise<void>;
+  logout: () => Promise<void>;
   register: (data: RegisterStoreData) => Promise<{ user: User; store: Store; subscription: Subscription }>;
   isLoading: boolean;
+  authError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_USERS: Record<string, User> = {
-  'admin@minisaas.com': {
-    id: '1', email: 'admin@minisaas.com', name: 'Administrador General', role: 'admin',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', createdAt: new Date('2024-01-01'), isActive: true,
-  },
-  'cliente@demo.com': {
-    id: '2', email: 'cliente@demo.com', name: 'Juan Perez', role: 'cliente',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=cliente', createdAt: new Date('2024-06-15'), isActive: true,
-  },
-  'tienda@demo.com': {
-    id: '3', email: 'tienda@demo.com', name: 'Maria Garcia', role: 'tienda',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tienda', createdAt: new Date('2024-03-20'), isActive: true,
-  },
-};
-
-const DEMO_STORE_SUBSCRIPTION: Subscription = {
-  id: 'sub_demo', userId: '3', storeId: 'store1', plan: 'profesional', status: 'trial',
-  startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-  trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-  price: 0, autoRenew: true, salesThisMonth: 3, lastResetDate: new Date(),
-};
-
-const DEMO_STORE: Store = {
-  id: 'store1', ownerId: '3', name: 'TechStore', description: 'Los mejores productos tecnológicos',
-  category: 'Tecnología', address: 'Calle Principal 123', phone: '+54 11 1234 5678',
-  email: 'contacto@techstore.com', isActive: true, rating: 4.5, createdAt: new Date('2024-03-20'),
-  subscriptionId: 'sub_demo',
-};
-
-const AUTH_STORAGE_KEY = 'minisaas_auth';
-const STORE_STORAGE_KEY = 'minisaas_store';
-const SUB_STORAGE_KEY = 'minisaas_subscription';
-const DYNAMIC_USERS_KEY = 'minisaas_dynamic_users';
-const DYNAMIC_STORES_KEY = 'minisaas_dynamic_stores';
-const DYNAMIC_SUBS_KEY = 'minisaas_dynamic_subs';
-
-function deserializeUser(data: string | null): User | null {
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(data);
-    return { ...parsed, createdAt: new Date(parsed.createdAt) };
-  } catch { return null; }
-}
-
-function deserializeSubscription(data: string | null): Subscription | null {
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(data);
-    return {
-      ...parsed,
-      startDate: new Date(parsed.startDate),
-      endDate: new Date(parsed.endDate),
-      trialEndDate: parsed.trialEndDate ? new Date(parsed.trialEndDate) : undefined,
-      lastResetDate: new Date(parsed.lastResetDate),
-    };
-  } catch { return null; }
-}
-
-function deserializeStore(data: string | null): Store | null {
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(data);
-    return { ...parsed, createdAt: new Date(parsed.createdAt) };
-  } catch { return null; }
-}
-
-function serializeUser(user: User): string {
-  return JSON.stringify({ ...user, createdAt: user.createdAt.toISOString() });
-}
-
-function serializeSubscription(sub: Subscription): string {
-  return JSON.stringify({
-    ...sub,
-    startDate: sub.startDate.toISOString(),
-    endDate: sub.endDate.toISOString(),
-    trialEndDate: sub.trialEndDate?.toISOString(),
-    lastResetDate: sub.lastResetDate.toISOString(),
-  });
-}
-
-function serializeStore(store: Store): string {
-  return JSON.stringify({ ...store, createdAt: store.createdAt.toISOString() });
-}
-
-// Funciones para usuarios dinámicos (creados por admin)
-function getDynamicUsers(): Record<string, { user: User; store?: Store; sub?: Subscription }> {
-  try {
-    const data = localStorage.getItem(DYNAMIC_USERS_KEY);
-    if (!data) return {};
-    const parsed = JSON.parse(data);
-    Object.keys(parsed).forEach(key => {
-      parsed[key].user.createdAt = new Date(parsed[key].user.createdAt);
-      if (parsed[key].store) parsed[key].store.createdAt = new Date(parsed[key].store.createdAt);
-      if (parsed[key].sub) {
-        parsed[key].sub.startDate = new Date(parsed[key].sub.startDate);
-        parsed[key].sub.endDate = new Date(parsed[key].sub.endDate);
-        parsed[key].sub.lastResetDate = new Date(parsed[key].sub.lastResetDate);
-        if (parsed[key].sub.trialEndDate) parsed[key].sub.trialEndDate = new Date(parsed[key].sub.trialEndDate);
-      }
-    });
-    return parsed;
-  } catch { return {}; }
-}
-
-// Exportar para que AdminDashboard pueda guardar usuarios
-export function saveDynamicUser(user: User, store?: Store, sub?: Subscription) {
-  const users = getDynamicUsers();
-  users[user.email] = { user, store, sub };
-  localStorage.setItem(DYNAMIC_USERS_KEY, JSON.stringify(users));
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedSession = localStorage.getItem(AUTH_STORAGE_KEY) || sessionStorage.getItem(AUTH_STORAGE_KEY);
-    return deserializeUser(storedSession);
-  });
-  const [subscription, setSubscription] = useState<Subscription | null>(() => {
-    const stored = localStorage.getItem(SUB_STORAGE_KEY) || sessionStorage.getItem(SUB_STORAGE_KEY);
-    return deserializeSubscription(stored);
-  });
-  const [store, setStore] = useState<Store | null>(() => {
-    const stored = localStorage.getItem(STORE_STORAGE_KEY) || sessionStorage.getItem(STORE_STORAGE_KEY);
-    return deserializeStore(stored);
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [store, setStore] = useState<Store | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const login = useCallback(async (email: string, password: string, role: UserRole, rememberMe: boolean = false) => {
+  // Cargar sesión existente al iniciar
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Obtener sesión actual
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+
+        if (currentSession?.user) {
+          await loadUserProfile(currentSession.user.id);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Escuchar cambios de autenticación
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('Auth event:', event);
+        setSession(newSession);
+
+        if (event === 'SIGNED_IN' && newSession?.user) {
+          await loadUserProfile(newSession.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setStore(null);
+          setSubscription(null);
+        }
+      }
+    );
+
+    return () => {
+      authSubscription.unsubscribe();
+    };
+  }, []);
+
+  // Cargar perfil, tienda y suscripción del usuario
+  const loadUserProfile = async (userId: string) => {
+    try {
+      // Cargar perfil
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        return;
+      }
+
+      const loadedUser: User = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.name,
+        role: profile.role as UserRole,
+        avatar: profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.email}`,
+        phone: profile.phone,
+        createdAt: new Date(profile.created_at),
+        isActive: profile.is_active,
+      };
+      setUser(loadedUser);
+
+      // Si es dueño de tienda, cargar tienda y suscripción
+      if (loadedUser.role === 'tienda') {
+        // Cargar tienda
+        const { data: storeData } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('owner_id', userId)
+          .single();
+
+        if (storeData) {
+          setStore({
+            id: storeData.id,
+            ownerId: storeData.owner_id,
+            name: storeData.name,
+            description: storeData.description,
+            category: storeData.category,
+            address: storeData.address,
+            phone: storeData.phone,
+            email: storeData.email,
+            logo: storeData.logo,
+            banner: storeData.banner,
+            isActive: storeData.is_active,
+            rating: parseFloat(storeData.rating) || 0,
+            createdAt: new Date(storeData.created_at),
+            location: storeData.latitude && storeData.longitude ? {
+              lat: parseFloat(storeData.latitude),
+              lng: parseFloat(storeData.longitude),
+              address: storeData.address || '',
+              locality: storeData.locality,
+              province: storeData.province,
+            } : undefined,
+          });
+
+          // Cargar suscripción
+          const { data: subData } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('store_id', storeData.id)
+            .single();
+
+          if (subData) {
+            setSubscription({
+              id: subData.id,
+              userId: subData.user_id,
+              storeId: subData.store_id,
+              plan: subData.plan,
+              status: subData.status,
+              startDate: new Date(subData.start_date),
+              endDate: new Date(subData.end_date),
+              trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
+              price: parseFloat(subData.price) || 0,
+              autoRenew: subData.auto_renew,
+              salesThisMonth: subData.sales_this_month || 0,
+              lastResetDate: new Date(subData.last_reset_date),
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+    }
+  };
+
+  const login = useCallback(async (email: string, password: string, _role?: UserRole) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    setAuthError(null);
 
-    let loggedInUser: User;
-    let userSubscription: Subscription | null = null;
-    let userStore: Store | null = null;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // 1. Buscar en usuarios demo
-    const demoUser = DEMO_USERS[email];
-    if (demoUser && demoUser.role === role) {
-      loggedInUser = demoUser;
-      if (role === 'tienda') {
-        userSubscription = DEMO_STORE_SUBSCRIPTION;
-        userStore = DEMO_STORE;
+      if (error) {
+        throw error;
       }
-    } else {
-      // 2. Buscar en usuarios dinámicos (creados por admin)
-      const dynamicUsers = getDynamicUsers();
-      const dynamicEntry = dynamicUsers[email];
 
-      if (dynamicEntry && dynamicEntry.user.role === role) {
-        loggedInUser = dynamicEntry.user;
-        userStore = dynamicEntry.store || null;
-        userSubscription = dynamicEntry.sub || null;
+      if (data.user) {
+        await loadUserProfile(data.user.id);
+      }
+    } catch (error) {
+      const authErr = error as AuthError;
+      console.error('Login error:', authErr);
+
+      // Mensajes amigables en español
+      if (authErr.message.includes('Invalid login credentials')) {
+        setAuthError('Email o contraseña incorrectos');
+      } else if (authErr.message.includes('Email not confirmed')) {
+        setAuthError('Por favor confirma tu email antes de iniciar sesión');
       } else {
-        // 3. Crear usuario temporal para cualquier login
-        loggedInUser = {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name: email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          role,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-          createdAt: new Date(),
-          isActive: true,
-        };
+        setAuthError(authErr.message || 'Error al iniciar sesión');
       }
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-
-    const storage = rememberMe ? localStorage : sessionStorage;
-    const otherStorage = rememberMe ? sessionStorage : localStorage;
-
-    storage.setItem(AUTH_STORAGE_KEY, serializeUser(loggedInUser));
-    otherStorage.removeItem(AUTH_STORAGE_KEY);
-
-    if (userSubscription) {
-      storage.setItem(SUB_STORAGE_KEY, serializeSubscription(userSubscription));
-    } else {
-      storage.removeItem(SUB_STORAGE_KEY);
-    }
-    otherStorage.removeItem(SUB_STORAGE_KEY);
-
-    if (userStore) {
-      storage.setItem(STORE_STORAGE_KEY, serializeStore(userStore));
-    } else {
-      storage.removeItem(STORE_STORAGE_KEY);
-    }
-    otherStorage.removeItem(STORE_STORAGE_KEY);
-
-    setUser(loggedInUser);
-    setSubscription(userSubscription);
-    setStore(userStore);
-    setIsLoading(false);
   }, []);
 
   const register = useCallback(async (data: RegisterStoreData): Promise<{ user: User; store: Store; subscription: Subscription }> => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    setAuthError(null);
 
-    const now = new Date();
-    const userId = `user_${Date.now()}`;
-    const storeId = `store_${Date.now()}`;
-    const subId = `sub_${Date.now()}`;
+    try {
+      // 1. Crear usuario en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.ownerName,
+            role: 'tienda',
+          },
+        },
+      });
 
-    const newUser: User = {
-      id: userId, email: data.email, name: data.ownerName, role: 'tienda',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`,
-      createdAt: now, isActive: true,
-    };
+      if (authError) {
+        throw authError;
+      }
 
-    const newStore: Store = {
-      id: storeId, ownerId: userId, name: data.storeName, description: '',
-      category: data.category, address: '', phone: data.phone || '', email: data.email,
-      isActive: true, rating: 0, createdAt: now, subscriptionId: subId,
-    };
+      if (!authData.user) {
+        throw new Error('No se pudo crear el usuario');
+      }
 
-    const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 14);
+      const userId = authData.user.id;
 
-    const newSubscription: Subscription = {
-      id: subId, userId, storeId, plan: 'profesional', status: 'trial',
-      startDate: now, endDate: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()),
-      trialEndDate: trialEnd, price: 0, autoRenew: false, salesThisMonth: 0, lastResetDate: now,
-    };
+      // 2. Actualizar el perfil con datos adicionales
+      await supabase
+        .from('profiles')
+        .update({
+          name: data.ownerName,
+          role: 'tienda',
+          phone: data.phone || null,
+        })
+        .eq('id', userId);
 
-    // Guardar en dynamic users para que pueda loguearse después
-    saveDynamicUser(newUser, newStore, newSubscription);
+      // 3. Crear la tienda
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .insert({
+          owner_id: userId,
+          name: data.storeName,
+          category: data.category,
+          email: data.email,
+          phone: data.phone || null,
+          is_active: true,
+        })
+        .select()
+        .single();
 
-    // Guardar sesión actual
-    localStorage.setItem(AUTH_STORAGE_KEY, serializeUser(newUser));
-    localStorage.setItem(STORE_STORAGE_KEY, serializeStore(newStore));
-    localStorage.setItem(SUB_STORAGE_KEY, serializeSubscription(newSubscription));
+      if (storeError) {
+        throw storeError;
+      }
 
-    setUser(newUser);
-    setStore(newStore);
-    setSubscription(newSubscription);
-    setIsLoading(false);
+      // 4. Crear suscripción trial
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 14);
 
-    return { user: newUser, store: newStore, subscription: newSubscription };
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
+
+      const { data: subData, error: subError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          store_id: storeData.id,
+          plan: 'profesional',
+          status: 'trial',
+          price: 0,
+          start_date: new Date().toISOString(),
+          end_date: endDate.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          auto_renew: false,
+          sales_this_month: 0,
+          last_reset_date: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (subError) {
+        throw subError;
+      }
+
+      // Construir objetos de respuesta
+      const newUser: User = {
+        id: userId,
+        email: data.email,
+        name: data.ownerName,
+        role: 'tienda',
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`,
+        createdAt: new Date(),
+        isActive: true,
+      };
+
+      const newStore: Store = {
+        id: storeData.id,
+        ownerId: userId,
+        name: data.storeName,
+        description: '',
+        category: data.category,
+        address: '',
+        phone: data.phone || '',
+        email: data.email,
+        isActive: true,
+        rating: 0,
+        createdAt: new Date(),
+        subscriptionId: subData.id,
+      };
+
+      const newSubscription: Subscription = {
+        id: subData.id,
+        userId,
+        storeId: storeData.id,
+        plan: 'profesional',
+        status: 'trial',
+        startDate: new Date(),
+        endDate,
+        trialEndDate: trialEnd,
+        price: 0,
+        autoRenew: false,
+        salesThisMonth: 0,
+        lastResetDate: new Date(),
+      };
+
+      setUser(newUser);
+      setStore(newStore);
+      setSubscription(newSubscription);
+
+      return { user: newUser, store: newStore, subscription: newSubscription };
+    } catch (error) {
+      const authErr = error as AuthError;
+      console.error('Register error:', authErr);
+
+      if (authErr.message.includes('already registered')) {
+        setAuthError('Este email ya está registrado');
+      } else {
+        setAuthError(authErr.message || 'Error al registrar');
+      }
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(STORE_STORAGE_KEY);
-    localStorage.removeItem(SUB_STORAGE_KEY);
-    sessionStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem(STORE_STORAGE_KEY);
-    sessionStorage.removeItem(SUB_STORAGE_KEY);
-    setUser(null);
-    setStore(null);
-    setSubscription(null);
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setStore(null);
+      setSubscription(null);
+      setSession(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const value = { user, subscription, store, login, logout, register, isLoading };
+  const value = {
+    user,
+    subscription,
+    store,
+    session,
+    login,
+    logout,
+    register,
+    isLoading,
+    authError,
+  };
 
   return (
     <AuthContext.Provider value={value}>
@@ -277,4 +376,9 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+// Mantener compatibilidad con código existente (deprecated)
+export function saveDynamicUser() {
+  console.warn('saveDynamicUser is deprecated. Users are now saved in Supabase.');
 }

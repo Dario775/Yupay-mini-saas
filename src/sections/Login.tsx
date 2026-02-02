@@ -52,7 +52,7 @@ const ROLES = [
 ];
 
 export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogin: () => void; onRegister?: () => void; onBack?: () => void; onTerms?: () => void }) {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, authError } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,8 +88,13 @@ export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogi
     if (!selectedRole) return;
     if (!validateForm()) return;
 
-    await login(email, password, selectedRole, rememberMe);
-    onLogin();
+    try {
+      await login(email, password, selectedRole);
+      onLogin();
+    } catch (error) {
+      // Error ya manejado en useAuth, se muestra via authError
+      console.error('Login failed:', error);
+    }
   };
 
   const handleBackToRole = () => {

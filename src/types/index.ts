@@ -16,6 +16,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatar?: string;
+  phone?: string;
   createdAt: Date;
   isActive: boolean;
   // Ubicación del usuario (para clientes)
@@ -120,6 +121,7 @@ export interface Store {
   description: string;
   category: string;
   logo?: string;
+  banner?: string;
   coverImage?: string;
   address: string;
   phone: string;
