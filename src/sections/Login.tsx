@@ -20,16 +20,6 @@ import type { UserRole } from '@/types';
 
 const ROLES = [
   {
-    id: 'admin' as UserRole,
-    title: 'Administrador',
-    description: 'Gestiona suscripciones y usuarios',
-    icon: Shield,
-    color: 'from-violet-500 to-purple-600',
-    bgColor: 'bg-violet-50 dark:bg-violet-900/10',
-    borderColor: 'border-violet-100 dark:border-violet-900/50',
-    demoEmail: 'admin@minisaas.com',
-  },
-  {
     id: 'cliente' as UserRole,
     title: 'Cliente',
     description: 'Compra productos y gestiona pedidos',
