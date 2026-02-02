@@ -98,17 +98,19 @@ const weeklyOrdersData = [
   { day: 'Dom', ordenes: 18 },
 ];
 
-function StatCard({ title, value, icon: Icon, trend, color }: {
+function StatCard({ title, value, icon: Icon, trend, color, gradient }: {
   title: string;
   value: string;
   icon: React.ElementType;
   trend?: string;
   color: string;
+  gradient?: string;
 }) {
   const isNegativeTrend = trend?.startsWith('-');
 
   return (
-    <Card className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300">
+    <Card className={`relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300`}>
+      {gradient && <div className={`absolute inset-0 opacity-[0.03] ${gradient}`} />}
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -177,7 +179,8 @@ export default function AdminDashboard() {
     stats, subscriptions, stores, users, planLimits,
     addSubscription, updateSubscriptionStatus, deleteSubscription,
     addStore, updateStore, updateStoreStatus, deleteStore,
-    addUser, updateUserStatus, deleteUser
+    addUser, updateUserStatus, deleteUser,
+    updatePlanLimits
   } = useAdminData();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -709,8 +712,8 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs text-white font-bold ${planKey === 'free' ? 'bg-gray-400' :
-                            planKey === 'basico' ? 'bg-blue-500' :
-                              planKey === 'profesional' ? 'bg-purple-500' : 'bg-amber-500'
+                          planKey === 'basico' ? 'bg-blue-500' :
+                            planKey === 'profesional' ? 'bg-purple-500' : 'bg-amber-500'
                           }`}>
                           {planKey.charAt(0).toUpperCase()}
                         </div>

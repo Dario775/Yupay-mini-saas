@@ -129,8 +129,8 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                         {[1, 2, 3].map((s) => (
                             <div key={s} className="flex items-center">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${step >= s
-                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                                     }`}>
                                     {step > s ? <Check className="h-5 w-5" /> : s}
                                 </div>
@@ -258,11 +258,11 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                                         key={key}
                                         onClick={() => setSelectedPlan(key)}
                                         className={`cursor-pointer transition-all duration-300 hover:shadow-lg relative ${isSelected
-                                                ? 'ring-2 ring-purple-500 scale-105'
-                                                : 'dark:bg-gray-800 dark:border-gray-700 hover:scale-102'
+                                            ? 'ring-2 ring-purple-500 scale-105'
+                                            : 'dark:bg-gray-800 dark:border-gray-700 hover:scale-102'
                                             } ${'popular' in plan && plan.popular ? 'border-purple-500' : ''}`}
                                     >
-                                        {'popular' in plan && plan.popular && (
+                                        {'popular' in plan && (plan as any).popular && (
                                             <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-pink-500">
                                                 Más popular
                                             </Badge>

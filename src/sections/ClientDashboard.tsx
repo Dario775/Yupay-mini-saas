@@ -601,14 +601,14 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
                       <p className="text-xs font-bold dark:text-white">Notificaciones por email</p>
                       <p className="text-[10px] text-gray-500">Actualizaciones de pedidos</p>
                     </div>
-                    <Switch defaultChecked size="sm" />
+                    <Switch defaultChecked />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold dark:text-white">Ofertas y promociones</p>
                       <p className="text-[10px] text-gray-500">Descuentos exclusivos</p>
                     </div>
-                    <Switch defaultChecked size="sm" />
+                    <Switch defaultChecked />
                   </div>
                 </CardContent>
               </Card>
