@@ -9,6 +9,7 @@ interface AuthContextType {
   store: Store | null;
   session: Session | null;
   login: (email: string, password: string, role?: UserRole) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterStoreData) => Promise<{ user: User; store: Store; subscription: Subscription }>;
   isLoading: boolean;
@@ -388,6 +389,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    if (isDemoMode) {
+      setAuthError('Login con Google no disponible en modo demo. Configura Supabase primero.');
+      return;
+    }
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const authErr = error as AuthError;
+      console.error('Google login error:', authErr);
+      setAuthError('Error al iniciar con Google. Verifica la configuración en Supabase.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isDemoMode]);
+
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -409,6 +439,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     store,
     session,
     login,
+    loginWithGoogle,
     logout,
     register,
     isLoading,

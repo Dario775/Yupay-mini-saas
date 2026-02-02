@@ -52,7 +52,7 @@ const ROLES = [
 ];
 
 export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogin: () => void; onRegister?: () => void; onBack?: () => void; onTerms?: () => void }) {
-  const { login, isLoading, authError } = useAuth();
+  const { login, isLoading, authError, loginWithGoogle } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -258,6 +258,14 @@ export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogi
                 )}
               </Button>
 
+              {/* Error Message */}
+              {authError && (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-xl p-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  <p className="text-xs text-red-600 dark:text-red-400">{authError}</p>
+                </div>
+              )}
+
               {/* Demo Account Box */}
               <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 rounded-xl p-4 mt-2">
                 <div className="flex items-start gap-3">
@@ -283,7 +291,13 @@ export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogi
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" className="h-11 rounded-xl border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={loginWithGoogle}
+                  disabled={isLoading}
+                  className="h-11 rounded-xl border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />

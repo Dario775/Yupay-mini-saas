@@ -31,18 +31,19 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                         <a className="hover:text-primary transition-colors hover:cursor-pointer" href="#solutions">Soluciones</a>
                         <a className="hover:text-primary transition-colors hover:cursor-pointer" href="#resources">Recursos</a>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={onLogin}
-                            className="hidden sm:block text-sm font-semibold hover:text-primary transition-colors"
+                            className="text-sm font-semibold hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
-                            Iniciar sesión
+                            Ingresar
                         </button>
                         <button
                             onClick={onRegister}
-                            className="bg-primary hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95"
+                            className="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95"
                         >
-                            Empezar ahora
+                            <span className="hidden sm:inline">Empezar ahora</span>
+                            <span className="sm:hidden">Crear</span>
                         </button>
                     </div>
                 </div>
