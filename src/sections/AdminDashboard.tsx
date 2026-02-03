@@ -71,6 +71,7 @@ import {
 } from 'recharts';
 import { exportToCSV } from '@/utils/export';
 import { toast } from 'sonner';
+import { formatPrice } from '@/utils/format';
 
 // Datos demo para los gráficos
 const monthlyRevenueData = [
@@ -223,7 +224,7 @@ export default function AdminDashboard() {
 
   const handleExportSubscriptions = () => {
     exportToCSV(subscriptions.map(s => ({
-      id: s.id, plan: s.plan, estado: s.status, precio: `$${s.price.toFixed(2)}`,
+      id: s.id, plan: s.plan, estado: s.status, precio: formatPrice(s.price),
       inicio: s.startDate.toLocaleDateString(), vencimiento: s.endDate.toLocaleDateString(),
       autoRenov: s.autoRenew ? 'Sí' : 'No',
     })), 'suscripciones', [
@@ -369,7 +370,7 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Ingresos"
-          value={`$${stats.totalRevenue.toFixed(2)}`}
+          value={formatPrice(stats.totalRevenue)}
           icon={DollarSign}
           trend="+23%"
           color="#ef4444"
@@ -432,7 +433,7 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{subscriber?.name || 'N/A'}</td>
                           <td className="px-6 py-4"><PlanBadge plan={sub.plan} /></td>
                           <td className="px-6 py-4"><SubscriptionStatusBadge status={sub.status} /></td>
-                          <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-medium">${sub.price.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-medium">{formatPrice(sub.price)}</td>
                           <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{sub.endDate.toLocaleDateString()}</td>
                           <td className="px-6 py-4 text-right">
                             <DropdownMenu>
@@ -481,7 +482,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-gray-500">Vence: {sub.endDate.toLocaleDateString()}</span>
-                        <span className="font-bold text-gray-900 dark:text-white">${sub.price.toFixed(2)}</span>
+                        <span className="text-2xl font-bold dark:text-white">{formatPrice(sub.price)}</span>
                       </div>
                     </div>
                   );
@@ -590,7 +591,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border dark:border-gray-700" />
-                            <span className="font-medium text-gray-900 dark:text-white">{user.name}</span>
+                            <span className="font-bold text-gray-900 dark:text-white">{formatPrice(sub.price)}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{user.email}</td>
@@ -718,7 +719,7 @@ export default function AdminDashboard() {
                         </div>
                         <span className="font-bold text-sm capitalize dark:text-white">{planKey}</span>
                       </div>
-                      <Badge variant="outline" className="text-[10px] h-5">${planLimits[planKey].price}/mes</Badge>
+                      <Badge variant="outline" className="text-[10px] h-5">{formatPrice(planLimits[planKey].price)}/mes</Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -778,10 +779,10 @@ export default function AdminDashboard() {
               <Select value={newSubForm.plan} onValueChange={(v: SubscriptionPlan) => setNewSubForm(p => ({ ...p, plan: v }))}>
                 <SelectTrigger className="dark:bg-gray-700"><SelectValue /></SelectTrigger>
                 <SelectContent className="dark:bg-gray-800">
-                  <SelectItem value="free">Gratis - $0/mes</SelectItem>
-                  <SelectItem value="basico">Básico - ${planLimits.basico.price}/mes</SelectItem>
-                  <SelectItem value="profesional">Profesional - ${planLimits.profesional.price}/mes</SelectItem>
-                  <SelectItem value="empresarial">Empresarial - ${planLimits.empresarial.price}/mes</SelectItem>
+                  <SelectItem value="free">Gratis - {formatPrice(0)}/mes</SelectItem>
+                  <SelectItem value="basico">Básico - {formatPrice(planLimits.basico.price)}/mes</SelectItem>
+                  <SelectItem value="profesional">Profesional - {formatPrice(planLimits.profesional.price)}/mes</SelectItem>
+                  <SelectItem value="empresarial">Empresarial - {formatPrice(planLimits.empresarial.price)}/mes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

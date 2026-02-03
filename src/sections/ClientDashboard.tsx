@@ -63,6 +63,7 @@ import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
 import { toast } from 'sonner';
 import { searchAddresses, getCurrentPosition, reverseGeocode, formatDistance, calculateDistance } from '@/lib/geo';
 import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
+import { formatPrice } from '@/utils/format';
 
 function OrderStatusBadge({ status }: { status: Order['status'] }) {
   const styles = {
@@ -192,11 +193,11 @@ function ProductCard({
           <div className="flex flex-col">
             {discountedPrice ? (
               <>
-                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">${discountedPrice.toFixed(0)}</p>
-                <p className="text-[10px] text-gray-400 line-through">${product.price}</p>
+                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">{formatPrice(discountedPrice)}</p>
+                <p className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</p>
               </>
             ) : (
-              <p className="text-sm font-bold text-gray-900 dark:text-white">${product.price}</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(product.price)}</p>
             )}
           </div>
           <Button
@@ -445,50 +446,79 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
               </Button>
             </div>
 
-            {/* Active Flash Offers Section */}
+            {/* Active Flash Offers Section - Compact Horizontal Scroll */}
             {flashOffers?.filter(o => o.status === 'active').length > 0 && (
-              <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-1000">
-                <div className="flex items-center justify-between mb-4">
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-3 px-1">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-yellow-500 text-white shadow-lg shadow-yellow-500/20">
-                      <Zap className="h-5 w-5 fill-current" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">Ofertas Flash</h2>
-                      <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">¡Solo por tiempo limitado!</p>
-                    </div>
+                    <Zap className="h-4 w-4 text-yellow-500 fill-current animate-pulse" />
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ofertas Flash</h2>
                   </div>
-                  <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 animate-pulse">
-                    En Directo
-                  </Badge>
+                  <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">
+                    Tiempo Limitado
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide snap-x">
                   {products
                     .filter(p => flashOffers.some(o => o.status === 'active' && o.productIds.includes(p.id)))
                     .map(product => {
                       const offer = flashOffers.find(o => o.status === 'active' && o.productIds.includes(product.id));
-                      const productStore = stores.find(s => s.id === product.storeId);
-                      let distance: number | undefined;
-                      if (userLocation && productStore?.location) {
-                        distance = calculateDistance(userLocation.lat, userLocation.lng, productStore.location.lat, productStore.location.lng);
-                      }
 
                       return (
-                        <ProductCard
-                          key={`flash-${product.id}`}
-                          product={product}
-                          onAddToCart={addToCart}
-                          isFavorite={isFavorite(product.id)}
-                          onToggleFavorite={handleToggleFavorite}
-                          onView={setSelectedProduct}
-                          distance={distance}
-                          flashOffer={offer}
-                        />
+                        <div key={`flash-${product.id}`} className="min-w-[240px] w-[240px] snap-center bg-white dark:bg-gray-900 border border-yellow-200 dark:border-yellow-900/30 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all active:scale-[0.98]">
+                          {/* Image with Gradient & Overlay */}
+                          <div className="h-32 relative bg-gray-50 dark:bg-gray-800">
+                            {product.images?.[0] ?
+                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                              :
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold">{product.name[0]}</div>
+                            }
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
+
+                            {/* Timer Badge Overlay */}
+                            <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                              <Clock className="w-3 h-3 text-yellow-400" />
+                              <span className="text-[10px] font-mono font-bold text-white tracking-wide">02:45:12</span>
+                            </div>
+
+                            {/* Discount Badge */}
+                            <div className="absolute top-2 right-2 bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
+                              -{offer?.discountValue || 20}%
+                            </div>
+
+                            {/* Price Overlay */}
+                            <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] text-gray-300 line-through font-medium leading-none mb-0.5">{formatPrice(product.price)}</span>
+                                <span className="text-xl font-black text-yellow-400 leading-none drop-shadow-md">
+                                  {formatPrice(product.price * (1 - (offer?.discountValue || 0) / 100))}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-3">
+                            <h3 className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 mb-1" title={product.name}>{product.name}</h3>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                <Zap className="h-3 w-3 text-yellow-500" />
+                                <span>Quedan {product.stock}</span>
+                              </p>
+                              <Button
+                                size="sm"
+                                className="h-7 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full"
+                                onClick={() => addToCart(product)}
+                              >
+                                Lo quiero
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                 </div>
-                <Separator className="mt-10" />
               </div>
             )}
 
@@ -533,48 +563,20 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
             )}
 
             {/* Benefits Section - Premium Refactor */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 mb-16">
-              {[
-                {
-                  icon: ShieldCheck,
-                  title: 'Compra Protegida',
-                  desc: 'Garantía oficial en todos los productos',
-                  color: 'from-emerald-400 to-cyan-500',
-                  bg: 'bg-emerald-500/10'
-                },
-                {
-                  icon: History,
-                  title: 'Cambios Sin Vueltas',
-                  desc: '30 días para devoluciones gratuitas',
-                  color: 'from-violet-400 to-purple-600',
-                  bg: 'bg-violet-500/10'
-                },
-                {
-                  icon: Headset,
-                  title: 'Soporte VIP 24/7',
-                  desc: 'Asistencia inmediata por expertos',
-                  color: 'from-amber-400 to-orange-600',
-                  bg: 'bg-amber-500/10'
-                },
-              ].map((benefit, i) => (
-                <div
-                  key={i}
-                  className="relative group bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 hover:border-violet-200 dark:hover:border-violet-900/50 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-500 overflow-hidden"
-                >
-                  <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full ${benefit.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${benefit.color} flex items-center justify-center mb-6 shadow-lg shadow-current/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
-                    <benefit.icon className="h-7 w-7 text-white" />
-                  </div>
-
-                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                    {benefit.title}
-                  </h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    {benefit.desc}
-                  </p>
-                </div>
-              ))}
+            {/* Benefits Section - Discrete/Minimalist */}
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 mt-8 mb-12 py-6 border-t border-dashed border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="text-xs font-medium">Compra Protegida</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <History className="h-4 w-4" />
+                <span className="text-xs font-medium">Devoluciones Gratuitas</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <Headset className="h-4 w-4" />
+                <span className="text-xs font-medium">Soporte 24/7</span>
+              </div>
             </div>
           </TabsContent>
 
@@ -613,7 +615,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
                       </div>
 
                       <div className="flex items-center justify-between pt-3 border-t dark:border-gray-800">
-                        <p className="text-sm font-bold text-violet-600">${order.total.toFixed(2)}</p>
+                        <p className="text-sm font-bold text-violet-600">{formatPrice(order.total)}</p>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-gray-500" onClick={() => setSelectedOrder(order)}>Detalles</Button>
                           {order.status === 'pendiente' && (

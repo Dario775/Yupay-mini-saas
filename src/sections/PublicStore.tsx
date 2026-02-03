@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { useClientData } from '@/hooks/useData';
 import type { Product, Order } from '@/types';
 import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
+import { formatPrice } from '@/utils/format';
 
 // Reusing ProductCard component logic but simplified for this file
 function ProductCard({
@@ -69,11 +70,11 @@ function ProductCard({
                     <div className="flex flex-col">
                         {discountedPrice ? (
                             <>
-                                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">${discountedPrice.toFixed(0)}</p>
-                                <p className="text-[10px] text-gray-400 line-through">${product.price}</p>
+                                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">{formatPrice(discountedPrice)}</p>
+                                <p className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</p>
                             </>
                         ) : (
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">${product.price}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(product.price)}</p>
                         )}
                     </div>
                     <Button
@@ -152,9 +153,9 @@ export default function PublicStore() {
         const message = `Hola *${store.name}*! 👋
 Me gustaría realizar el siguiente pedido:
 
-${cart.map(i => `• ${i.quantity}x ${i.product.name} ($${i.product.price})`).join('\n')}
+${cart.map(i => `• ${i.quantity}x ${i.product.name} (${formatPrice(i.product.price)})`).join('\n')}
 
-*Total: $${cartTotal.toFixed(2)}*
+*Total: ${formatPrice(cartTotal)}*
 
 Cliente: ${customerName} (Web)
 Entrega: Retiro en tienda
@@ -277,7 +278,7 @@ Quedo a la espera de su confirmación. Gracias!`;
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">{product.name}</h4>
-                                                <p className="text-violet-600 font-bold text-sm">${product.price}</p>
+                                                <p className="text-violet-600 font-bold text-sm">{formatPrice(product.price)}</p>
                                             </div>
                                             <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-full px-2 py-1">
                                                 <button onClick={() => updateQuantity(product.id, -1)} className="p-1 hover:text-red-500 transition-colors"><Minus className="h-3 w-3" /></button>
@@ -302,8 +303,8 @@ Quedo a la espera de su confirmación. Gracias!`;
                                                     key={pm.id}
                                                     onClick={() => setSelectedPaymentMethod(pm.id)}
                                                     className={`p-2 rounded-lg border text-xs font-medium transition-all ${selectedPaymentMethod === pm.id
-                                                            ? 'border-violet-600 bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-500'
-                                                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                                        ? 'border-violet-600 bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-500'
+                                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                                                         }`}
                                                 >
                                                     {pm.name}
@@ -315,7 +316,7 @@ Quedo a la espera de su confirmación. Gracias!`;
 
                                 <div className="flex justify-between items-center mb-4">
                                     <span className="text-gray-500">Total a pagar</span>
-                                    <span className="text-2xl font-black text-gray-900 dark:text-white">${cartTotal.toFixed(2)}</span>
+                                    <span className="text-2xl font-black text-gray-900 dark:text-white">{formatPrice(cartTotal)}</span>
                                 </div>
                                 <Button onClick={handleCheckout} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-green-500/20">
                                     Enviar Pedido por WhatsApp

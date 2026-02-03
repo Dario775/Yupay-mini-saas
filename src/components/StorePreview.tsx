@@ -27,6 +27,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import type { Store, Product, ShippingMethod, PaymentMethod, FlashOffer } from '@/types';
+import { formatPrice } from '@/utils/format';
 
 interface StorePreviewProps {
     isOpen: boolean;
@@ -175,7 +176,7 @@ export default function StorePreview({
                                     {activeFlashOffers.map(offer => (
                                         <div key={offer.id} className="flex items-center gap-2 bg-white/20 backdrop-blur rounded-lg px-3 py-1.5 whitespace-nowrap">
                                             <span className="text-white font-bold text-sm">
-                                                {offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `$${offer.discountValue} OFF`}
+                                                {offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${formatPrice(offer.discountValue)} OFF`}
                                             </span>
                                             <span className="text-white/80 text-xs flex items-center gap-1">
                                                 <Timer className="w-3 h-3" />
@@ -275,11 +276,11 @@ export default function StorePreview({
                                                     <div className="flex items-center gap-2 mt-2">
                                                         {discountedPrice ? (
                                                             <>
-                                                                <span className="text-sm font-bold text-violet-600">${discountedPrice.toFixed(0)}</span>
-                                                                <span className="text-xs text-gray-400 line-through">${product.price}</span>
+                                                                <span className="text-sm font-bold text-violet-600">{formatPrice(discountedPrice)}</span>
+                                                                <span className="text-xs text-gray-400 line-through">{formatPrice(product.price)}</span>
                                                             </>
                                                         ) : (
-                                                            <span className="text-sm font-bold text-gray-900 dark:text-white">${product.price}</span>
+                                                            <span className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(product.price)}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -307,7 +308,7 @@ export default function StorePreview({
                                                     <p className="text-xs text-gray-500">{method.estimatedDays}</p>
                                                 </div>
                                                 <span className="text-sm font-bold text-violet-600">
-                                                    {method.price === 0 ? 'Gratis' : `$${method.price}`}
+                                                    {method.price === 0 ? 'Gratis' : formatPrice(method.price)}
                                                 </span>
                                             </div>
                                         ))}
@@ -369,7 +370,7 @@ export default function StorePreview({
                             <div>
                                 <p className="text-sm text-gray-500">{selectedProduct.category}</p>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedProduct.name}</h2>
-                                <p className="text-2xl font-bold text-violet-600 mt-2">${selectedProduct.price}</p>
+                                <p className="text-2xl font-bold text-violet-600 mt-2">{formatPrice(selectedProduct.price)}</p>
                             </div>
 
                             <p className="text-gray-600 dark:text-gray-400">{selectedProduct.description}</p>

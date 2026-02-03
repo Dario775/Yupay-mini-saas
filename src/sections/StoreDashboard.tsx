@@ -82,6 +82,7 @@ import {
 import { exportToCSV } from '@/utils/export';
 import { toast } from 'sonner';
 import { formatStatusUpdateMessage, generateWhatsAppLink } from '@/utils/whatsapp';
+import { formatPrice } from '@/utils/format';
 
 // Datos demo para gráficos
 const salesData = [
@@ -167,6 +168,7 @@ export default function StoreDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('products');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -394,8 +396,8 @@ export default function StoreDashboard() {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg justify-start sm:justify-center">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="hidden md:flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg justify-start sm:justify-center">
           <TabsTrigger value="products" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Package className="h-3 w-3 mr-1.5" />Stock</TabsTrigger>
           <TabsTrigger value="orders" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><ShoppingCart className="h-3 w-3 mr-1.5" />Ventas</TabsTrigger>
           <TabsTrigger value="flash" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0 relative">
@@ -813,7 +815,7 @@ export default function StoreDashboard() {
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 dark:text-white">{method.name}</h4>
-                        <p className="text-[10px] text-gray-500">{method.estimatedDays} • {method.price === 0 ? 'Gratis' : `$${method.price}`}</p>
+                        <p className="text-[10px] text-gray-500">{method.estimatedDays} • {method.price === 0 ? 'Gratis' : formatPrice(method.price)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1113,7 +1115,7 @@ export default function StoreDashboard() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="text-sm text-gray-500 dark:text-gray-400">Categoría</label><p className="font-medium dark:text-white">{selectedProduct.category}</p></div>
-                <div><label className="text-sm text-gray-500 dark:text-gray-400">Precio</label><p className="font-medium text-xl dark:text-white">${selectedProduct.price.toFixed(2)}</p></div>
+                <div><label className="text-sm text-gray-500 dark:text-gray-400">Precio</label><p className="font-medium text-xl dark:text-white">{formatPrice(selectedProduct.price)}</p></div>
                 <div><label className="text-sm text-gray-500 dark:text-gray-400">Stock</label><p className="font-medium dark:text-white">{selectedProduct.stock} unidades</p></div>
                 <div><label className="text-sm text-gray-500 dark:text-gray-400">Estado</label><p><Badge variant={selectedProduct.isActive ? 'default' : 'secondary'}>{selectedProduct.isActive ? 'Activo' : 'Inactivo'}</Badge></p></div>
               </div>
@@ -1130,9 +1132,9 @@ export default function StoreDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between"><OrderStatusBadge status={selectedOrder.status} /><span className="text-sm text-gray-500 dark:text-gray-400">{selectedOrder.createdAt.toLocaleDateString()}</span></div>
               <div><h4 className="font-medium mb-2 dark:text-white">Productos</h4>
-                <div className="space-y-2">{selectedOrder.items.map((item, idx) => (<div key={idx} className="flex justify-between text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded"><span className="dark:text-gray-300">{item.quantity}x {item.productName}</span><span className="font-medium dark:text-white">${item.total.toFixed(2)}</span></div>))}</div>
+                <div className="space-y-2">{selectedOrder.items.map((item, idx) => (<div key={idx} className="flex justify-between text-sm p-2 bg-gray-50 dark:bg-gray-700/50 rounded"><span className="dark:text-gray-300">{item.quantity}x {item.productName}</span><span className="font-medium dark:text-white">{formatPrice(item.total)}</span></div>))}</div>
               </div>
-              <div className="flex justify-between font-semibold text-lg border-t dark:border-gray-700 pt-3"><span className="dark:text-white">Total</span><span className="dark:text-white">${selectedOrder.total.toFixed(2)}</span></div>
+              <div className="flex justify-between font-semibold text-lg border-t dark:border-gray-700 pt-3"><span className="dark:text-white">Total</span><span className="dark:text-white">{formatPrice(selectedOrder.total)}</span></div>
               <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400"><Home className="h-4 w-4 mt-0.5" /><span>{selectedOrder.shippingAddress}</span></div>
 
               <Button
@@ -1164,6 +1166,46 @@ export default function StoreDashboard() {
         paymentMethods={paymentMethods}
         activeFlashOffers={activeFlashOffers}
       />
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">
+        <div className="bg-white/90 backdrop-blur-lg border dark:border-gray-800 shadow-xl rounded-2xl p-2 flex justify-around items-center">
+          <button onClick={() => setActiveTab('products')} className={`p-2 rounded-xl transition-all ${activeTab === 'products' ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
+            <Package className="h-6 w-6" strokeWidth={activeTab === 'products' ? 2.5 : 2} />
+          </button>
+          <button onClick={() => setActiveTab('orders')} className={`p-2 rounded-xl transition-all ${activeTab === 'orders' ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
+            <ShoppingCart className="h-6 w-6" strokeWidth={activeTab === 'orders' ? 2.5 : 2} />
+          </button>
+          <button onClick={() => setActiveTab('flash')} className={`p-2 rounded-xl transition-all ${activeTab === 'flash' ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' : 'text-gray-400'}`}>
+            <div className="relative">
+              <Zap className="h-6 w-6" strokeWidth={activeTab === 'flash' ? 2.5 : 2} />
+              {activeFlashOffers.length > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-900"></span>}
+            </div>
+          </button>
+          <button onClick={() => setActiveTab('analytics')} className={`p-2 rounded-xl transition-all ${activeTab === 'analytics' ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
+            <BarChart3 className="h-6 w-6" strokeWidth={activeTab === 'analytics' ? 2.5 : 2} />
+          </button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className={`p-2 rounded-xl transition-all ${['shipping', 'payments', 'settings'].includes(activeTab) ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
+                <MoreHorizontal className="h-6 w-6" strokeWidth={['shipping', 'payments', 'settings'].includes(activeTab) ? 2.5 : 2} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="mb-2 w-48">
+              <DropdownMenuItem onClick={() => setActiveTab('shipping')} className="gap-2 p-3">
+                <Truck className="h-4 w-4" /> Envíos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab('payments')} className="gap-2 p-3">
+                <CreditCard className="h-4 w-4" /> Cobros
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setActiveTab('settings')} className="gap-2 p-3">
+                <Home className="h-4 w-4" /> Ajustes
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     </div>
   );
 }
