@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
   Subscription,
   Store,
@@ -9,15 +9,19 @@ import type {
   SubscriptionPlan,
   OrderStatus,
   User,
+  FlashOffer,
+  FlashOfferStatus,
+  ShippingMethod,
+  PaymentMethod,
   PLAN_CONFIG
 } from '@/types';
 
-// Configuración de planes
+// Configuración de planes (con flash offers)
 const PLAN_LIMITS = {
-  free: { maxSalesPerMonth: 5, maxProducts: 10, maxStores: 1, price: 0 },
-  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, price: 9.99 },
-  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, price: 29.99 },
-  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, price: 99.99 },
+  free: { maxSalesPerMonth: 5, maxProducts: 10, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 0 },
+  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 9.99 },
+  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, hasFlashOffers: true, maxFlashOffersPerMonth: 2, maxFlashOfferRadius: 5, price: 29.99 },
+  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, hasFlashOffers: true, maxFlashOffersPerMonth: -1, maxFlashOfferRadius: 20, price: 99.99 },
 };
 
 // Datos de demostración - Usuarios (vacío para producción)
@@ -166,9 +170,96 @@ export function useAdminData() {
 export function useClientData(userId: string) {
   // Todos los usuarios empiezan sin órdenes (datos reales vendrán de Supabase)
   const [orders, setOrders] = useState<Order[]>([]);
-  const [products] = useState<Product[]>([]);
+  const [products] = useState<Product[]>([
+    {
+      id: 'p1',
+      storeId: 'store1',
+      name: 'Auriculares Pro Wireless',
+      description: 'Auriculares con cancelación de ruido de alta fidelidad.',
+      price: 15000,
+      stock: 15,
+      category: 'Audio',
+      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
+      isActive: true,
+      createdAt: new Date()
+    },
+    {
+      id: 'p2',
+      storeId: 'store1',
+      name: 'Smartwatch Serie X',
+      description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
+      price: 25000,
+      stock: 8,
+      category: 'Electrónica',
+      images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
+      isActive: true,
+      createdAt: new Date()
+    },
+    {
+      id: 'p3',
+      storeId: 'store2',
+      name: 'Cámara Reflex Nikon',
+      description: 'Cámara profesional para fotografía de alta calidad.',
+      price: 85000,
+      stock: 3,
+      category: 'Fotografía',
+      images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80'],
+      isActive: true,
+      createdAt: new Date()
+    }
+  ]);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [stores] = useState<Store[]>([]);
+  const [stores] = useState<Store[]>([
+    {
+      id: 'store1',
+      ownerId: 'u1',
+      name: 'Mi Tienda Tech',
+      description: 'La mejor tecnología a tu alcance.',
+      category: 'Electrónica',
+      address: 'Av. Corrientes 1234, CABA',
+      phone: '1122334455',
+      email: 'tienda@demo.com',
+      isActive: true,
+      rating: 4.8,
+      createdAt: new Date(),
+      location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
+    },
+    {
+      id: 'store2',
+      ownerId: 'u2',
+      name: 'Foto Center',
+      description: 'Expertos en fotografía y video.',
+      category: 'Fotografía',
+      address: 'Florida 500, CABA',
+      phone: '1199887766',
+      email: 'foto@demo.com',
+      isActive: true,
+      rating: 4.5,
+      createdAt: new Date(),
+      location: { lat: -34.6015, lng: -58.3750, address: 'Florida 500, CABA', locality: 'CABA' }
+    }
+  ]);
+
+  const [flashOffers, setFlashOffers] = useState<FlashOffer[]>([
+    {
+      id: 'f1',
+      storeId: 'store1',
+      productIds: ['p1'],
+      discountType: 'percentage',
+      discountValue: 30,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      duration: 2,
+      radiusKm: 5,
+      currentRedemptions: 3,
+      maxRedemptions: 50,
+      status: 'active',
+      title: '30% OFF en Auriculares Pro',
+      description: 'Oferta relámpago exclusiva para clientes cercanos.',
+      createdAt: new Date(),
+      notificationsSent: 15
+    }
+  ]);
 
   const createOrder = useCallback((storeId: string, items: Order['items'], shippingAddress: string) => {
     const newOrder: Order = { id: `ord${Date.now()}`, customerId: userId, storeId, items, total: items.reduce((acc, item) => acc + item.total, 0), status: 'pendiente', createdAt: new Date(), shippingAddress };
@@ -186,22 +277,77 @@ export function useClientData(userId: string) {
 
   const isFavorite = useCallback((productId: string) => favorites.includes(productId), [favorites]);
 
-  return { orders, products, stores, favorites, createOrder, cancelOrder, toggleFavorite, isFavorite };
+  return { orders, products, stores, favorites, flashOffers, createOrder, cancelOrder, toggleFavorite, isFavorite };
 }
 
 // Hook para Tienda - Con lógica de límites
 export function useStoreData(storeId: string) {
   // Todas las tiendas empiezan vacías (datos reales vendrán de Supabase)
-  const [products, setProducts] = useState<Product[]>([]);
+  // Datos iniciales para pruebas (Demo)
+  const [products, setProducts] = useState<Product[]>([
+    {
+      id: 'p1',
+      storeId: 'store1',
+      name: 'Auriculares Pro Wireless',
+      description: 'Auriculares con cancelación de ruido de alta fidelidad.',
+      price: 15000,
+      stock: 15,
+      category: 'Audio',
+      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
+      isActive: true,
+      createdAt: new Date()
+    },
+    {
+      id: 'p2',
+      storeId: 'store1',
+      name: 'Smartwatch Serie X',
+      description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
+      price: 25000,
+      stock: 8,
+      category: 'Electrónica',
+      images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
+      isActive: true,
+      createdAt: new Date()
+    }
+  ]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>({
+    id: 'sub1',
+    userId: 'u1',
+    plan: 'profesional',
+    status: 'activa',
+    startDate: new Date(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    price: 29.99,
+    autoRenew: true,
+    salesThisMonth: 0,
+    lastResetDate: new Date()
+  });
 
-  // Store State - undefined hasta que se cargue de Supabase
-  const [store, setStore] = useState<Store | undefined>(undefined);
+  // Store State
+  const [store, setStore] = useState<Store | undefined>({
+    id: 'store1',
+    ownerId: 'u1',
+    name: 'Mi Tienda Tech',
+    description: 'La mejor tecnología a tu alcance.',
+    category: 'Electrónica',
+    address: 'Av. Corrientes 1234, CABA',
+    phone: '1122334455',
+    email: 'tienda@demo.com',
+    isActive: true,
+    rating: 4.8,
+    createdAt: new Date(),
+    location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
+  });
 
-  // Métodos de envío/pago vacíos inicialmente
-  const [shippingMethods, setShippingMethods] = useState(store?.shippingMethods || []);
-  const [paymentMethods, setPaymentMethods] = useState(store?.paymentMethods || []);
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([
+    { id: 's1', name: 'Envío Express', price: 500, estimatedDays: '24-48hs', isActive: true },
+    { id: 's2', name: 'Retiro en Local', price: 0, estimatedDays: 'Hoy mismo', isActive: true }
+  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
+    { id: 'm1', type: 'mercadopago', name: 'Mercado Pago', isActive: true },
+    { id: 'm2', type: 'transferencia', name: 'Transferencia', isActive: true }
+  ]);
 
   const updateStoreInfo = useCallback((updates: Partial<Store>) => {
     setStore(prev => prev ? { ...prev, ...updates } : prev);
@@ -308,6 +454,115 @@ export function useStoreData(storeId: string) {
     setPaymentMethods(prev => prev.filter(m => m.id !== id));
   }, []);
 
+  // ================================
+  // OFERTAS FLASH (Feature Premium)
+  // ================================
+  const [flashOffers, setFlashOffers] = useState<FlashOffer[]>([
+    {
+      id: 'f1',
+      storeId: 'store1',
+      productIds: ['p1'],
+      discountType: 'percentage',
+      discountValue: 30,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 horas
+      duration: 2,
+      radiusKm: 5,
+      currentRedemptions: 3,
+      maxRedemptions: 50,
+      status: 'active',
+      title: '30% OFF en Auriculares Pro',
+      description: 'Oferta relámpago exclusiva para clientes cercanos.',
+      createdAt: new Date(),
+      notificationsSent: 15
+    }
+  ]);
+
+  // Verificar si puede crear ofertas flash
+  const canCreateFlashOffer = limits.hasFlashOffers;
+  const flashOffersThisMonth = flashOffers.filter(o => {
+    const offerMonth = new Date(o.createdAt).getMonth();
+    const currentMonth = new Date().getMonth();
+    return offerMonth === currentMonth;
+  }).length;
+  const flashOffersRemaining = limits.maxFlashOffersPerMonth === -1
+    ? -1
+    : limits.maxFlashOffersPerMonth - flashOffersThisMonth;
+  const maxFlashOfferRadius = limits.maxFlashOfferRadius;
+
+  // Actualizar estado de ofertas (expiradas -> expired, programadas -> active)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setFlashOffers(prev => prev.map(offer => {
+        if (offer.status === 'scheduled' && new Date(offer.startDate) <= now) {
+          return { ...offer, status: 'active' as FlashOfferStatus };
+        }
+        if (offer.status === 'active' && new Date(offer.endDate) <= now) {
+          return { ...offer, status: 'expired' as FlashOfferStatus };
+        }
+        return offer;
+      }));
+    }, 60000); // Revisar cada minuto
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Crear oferta flash
+  const createFlashOffer = useCallback((data: {
+    productIds: string[];
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    durationHours: number;
+    radiusKm: number;
+    title: string;
+    description?: string;
+    maxRedemptions?: number;
+    startImmediately?: boolean;
+  }) => {
+    if (!canCreateFlashOffer) return null;
+    if (flashOffersRemaining !== -1 && flashOffersRemaining <= 0) return null;
+    if (data.radiusKm > maxFlashOfferRadius) return null;
+
+    const now = new Date();
+    const startDate = data.startImmediately ? now : new Date(now.getTime() + 5 * 60000); // 5 min para programar
+    const endDate = new Date(startDate.getTime() + data.durationHours * 60 * 60 * 1000);
+
+    const newOffer: FlashOffer = {
+      id: `flash${Date.now()}`,
+      storeId,
+      productIds: data.productIds,
+      discountType: data.discountType,
+      discountValue: data.discountValue,
+      startDate,
+      endDate,
+      duration: data.durationHours,
+      radiusKm: data.radiusKm,
+      maxRedemptions: data.maxRedemptions,
+      currentRedemptions: 0,
+      status: data.startImmediately ? 'active' : 'scheduled',
+      title: data.title,
+      description: data.description,
+      createdAt: now,
+      notificationsSent: 0,
+    };
+
+    setFlashOffers(prev => [newOffer, ...prev]);
+    return newOffer;
+  }, [canCreateFlashOffer, flashOffersRemaining, maxFlashOfferRadius, storeId]);
+
+  // Cancelar oferta flash
+  const cancelFlashOffer = useCallback((offerId: string) => {
+    setFlashOffers(prev => prev.map(o =>
+      o.id === offerId && (o.status === 'scheduled' || o.status === 'active')
+        ? { ...o, status: 'cancelled' as FlashOfferStatus }
+        : o
+    ));
+  }, []);
+
+  // Obtener ofertas activas
+  const activeFlashOffers = flashOffers.filter(o => o.status === 'active');
+
   return {
     store, updateStoreInfo,
     stats, products, orders, subscription, pendingOrders, lowStockProducts, planLimits: PLAN_LIMITS,
@@ -317,5 +572,9 @@ export function useStoreData(storeId: string) {
     shippingMethods, addShippingMethod, updateShippingMethod, deleteShippingMethod,
     // Métodos de pago
     paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod,
+    // Ofertas Flash
+    flashOffers, activeFlashOffers,
+    canCreateFlashOffer, flashOffersRemaining, maxFlashOfferRadius,
+    createFlashOffer, cancelFlashOffer,
   };
 }

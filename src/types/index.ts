@@ -35,6 +35,10 @@ export interface PlanLimits {
   hasReports: boolean;
   hasAdvancedReports: boolean;
   hasApiAccess: boolean;
+  // Flash Offers (Ofertas Relámpago)
+  hasFlashOffers: boolean;
+  maxFlashOffersPerMonth: number; // -1 = ilimitado
+  maxFlashOfferRadius: number;    // Radio máximo en km
   price: number;
 }
 
@@ -46,6 +50,9 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasReports: false,
     hasAdvancedReports: false,
     hasApiAccess: false,
+    hasFlashOffers: false,
+    maxFlashOffersPerMonth: 0,
+    maxFlashOfferRadius: 0,
     price: 0,
   },
   basico: {
@@ -55,6 +62,9 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasReports: true,
     hasAdvancedReports: false,
     hasApiAccess: false,
+    hasFlashOffers: false,
+    maxFlashOffersPerMonth: 0,
+    maxFlashOfferRadius: 0,
     price: 9.99,
   },
   profesional: {
@@ -64,6 +74,9 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasReports: true,
     hasAdvancedReports: true,
     hasApiAccess: false,
+    hasFlashOffers: true,
+    maxFlashOffersPerMonth: 2,
+    maxFlashOfferRadius: 5,
     price: 29.99,
   },
   empresarial: {
@@ -73,6 +86,9 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasReports: true,
     hasAdvancedReports: true,
     hasApiAccess: true,
+    hasFlashOffers: true,
+    maxFlashOffersPerMonth: -1, // Ilimitado
+    maxFlashOfferRadius: 20,
     price: 99.99,
   },
 };
@@ -218,4 +234,34 @@ export interface RegisterStoreData {
   password: string;
   category: string;
   phone?: string;
+}
+
+// Ofertas Flash (Relámpago) - Feature Premium
+export type FlashOfferStatus = 'scheduled' | 'active' | 'expired' | 'cancelled';
+
+export interface FlashOffer {
+  id: string;
+  storeId: string;
+  // Productos en oferta
+  productIds: string[];           // IDs de productos incluidos
+  // Descuento
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;          // % o monto fijo
+  // Tiempo
+  startDate: Date;
+  endDate: Date;
+  duration: number;               // Duración en horas (para mostrar countdown)
+  // Alcance geográfico
+  radiusKm: number;               // Radio de alcance en km
+  // Límites
+  maxRedemptions?: number;        // Límite de usos (opcional)
+  currentRedemptions: number;     // Usos actuales
+  // Estado
+  status: FlashOfferStatus;
+  // Metadata
+  title: string;                  // Ej: "30% OFF en Auriculares"
+  description?: string;
+  createdAt: Date;
+  // Notificaciones enviadas
+  notificationsSent: number;
 }

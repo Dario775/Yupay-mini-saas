@@ -30,11 +30,14 @@ import {
   Settings,
   MessageCircle,
   MapPin,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { searchAddresses, getCurrentPosition, reverseGeocode } from '@/lib/geo';
 import type { GeoLocation } from '@/types';
-import LocationMap from '@/components/ui/LocationMap'; // Importar el mapa
+import LocationMap from '@/components/ui/LocationMap';
+import FlashOffersManager from '@/components/FlashOffersManager';
+import StorePreview from '@/components/StorePreview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -151,14 +154,18 @@ function StatCard({ title, value, icon: Icon, trend, color, alert }: {
 export default function StoreDashboard() {
   const { user } = useAuth();
   const {
-    stats, products, orders, pendingOrders, lowStockProducts,
+    stats, products, orders, pendingOrders, lowStockProducts, subscription,
     addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock,
     shippingMethods, addShippingMethod, updateShippingMethod, deleteShippingMethod,
     paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod,
-    store, updateStoreInfo
+    store, updateStoreInfo,
+    // Flash Offers
+    flashOffers, activeFlashOffers, canCreateFlashOffer, flashOffersRemaining,
+    maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
   } = useStoreData('store1');
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -365,7 +372,12 @@ export default function StoreDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1 px-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-[10px] gap-1 px-2"
+            onClick={() => setIsPreviewOpen(true)}
+          >
             <Eye className="h-3 w-3" />Ver tienda
           </Button>
           <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs ring-2 ring-white dark:ring-gray-800">T</div>
@@ -386,6 +398,14 @@ export default function StoreDashboard() {
         <TabsList className="flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg">
           <TabsTrigger value="products" className="flex-1 text-[10px] sm:text-xs py-2"><Package className="h-3 w-3 mr-1.5" />Stock</TabsTrigger>
           <TabsTrigger value="orders" className="flex-1 text-[10px] sm:text-xs py-2"><ShoppingCart className="h-3 w-3 mr-1.5" />Ventas</TabsTrigger>
+          <TabsTrigger value="flash" className="flex-1 text-[10px] sm:text-xs py-2 relative">
+            <Zap className="h-3 w-3 mr-1.5 text-yellow-500" />Flash
+            {activeFlashOffers.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 text-white text-[8px] rounded-full flex items-center justify-center">
+                {activeFlashOffers.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="shipping" className="flex-1 text-[10px] sm:text-xs py-2"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
           <TabsTrigger value="payments" className="flex-1 text-[10px] sm:text-xs py-2"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
           <TabsTrigger value="analytics" className="flex-1 text-[10px] sm:text-xs py-2"><BarChart3 className="h-3 w-3 mr-1.5" />Stats</TabsTrigger>
@@ -574,6 +594,25 @@ export default function StoreDashboard() {
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Flash Offers Tab */}
+        <TabsContent value="flash">
+          <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <FlashOffersManager
+                products={products}
+                flashOffers={flashOffers}
+                activeFlashOffers={activeFlashOffers}
+                canCreateFlashOffer={canCreateFlashOffer}
+                flashOffersRemaining={flashOffersRemaining}
+                maxFlashOfferRadius={maxFlashOfferRadius}
+                createFlashOffer={createFlashOffer}
+                cancelFlashOffer={cancelFlashOffer}
+                currentPlan={subscription?.plan || 'free'}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1114,6 +1153,17 @@ export default function StoreDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Vista Previa de Tienda */}
+      <StorePreview
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        store={store}
+        products={products}
+        shippingMethods={shippingMethods}
+        paymentMethods={paymentMethods}
+        activeFlashOffers={activeFlashOffers}
+      />
     </div>
   );
 }

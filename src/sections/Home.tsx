@@ -19,11 +19,11 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
             {/* Navigation */}
             <nav className="fixed top-0 w-full z-50 px-6 py-4">
                 <div className="max-w-7xl mx-auto glass bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl px-6 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-purple-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                            <span className="material-symbols-outlined">rocket_launch</span>
+                    <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-500 ring-2 ring-white/10">
+                            <span className="text-xl font-black font-outfit">Y</span>
                         </div>
-                        <span className="text-xl font-extrabold font-display tracking-tight text-slate-900 dark:text-white">MiniSaaS</span>
+                        <span className="text-2xl font-black font-outfit tracking-tighter text-slate-900 dark:text-white">YUPAY</span>
                     </div>
                     <div className="hidden md:flex items-center gap-8 font-medium text-sm text-slate-600 dark:text-slate-300">
                         <a className="hover:text-primary transition-colors hover:cursor-pointer" href="#features">Funcionalidades</a>
@@ -229,7 +229,7 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_50%,rgba(192,132,252,0.4),transparent)]"></div>
                     </div>
                     <h2 className="text-4xl lg:text-5xl font-extrabold font-display text-white mb-6 relative z-10">¿Listo para transformar tu negocio?</h2>
-                    <p className="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto relative z-10 opacity-90">Únete a miles de comerciantes que están haciendo crecer su marca con MiniSaaS. No requiere tarjeta para empezar.</p>
+                    <p className="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto relative z-10 opacity-90">Únete a miles de comerciantes que están haciendo crecer su marca con YUPAY. No requiere tarjeta para empezar.</p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
                         <button
                             onClick={onRegister}
@@ -248,10 +248,10 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
             <footer className="py-12 border-t border-slate-200 dark:border-slate-800 px-6">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-                            <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+                        <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-500/10">
+                            <span className="text-sm font-black font-outfit">Y</span>
                         </div>
-                        <span className="text-lg font-bold font-display text-slate-900 dark:text-white">MiniSaaS</span>
+                        <span className="text-xl font-black font-outfit tracking-tighter text-slate-900 dark:text-white">YUPAY</span>
                     </div>
                     <div className="flex items-center gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
                         <a className="hover:text-primary cursor-pointer" onClick={(e) => { e.preventDefault(); }} href="#">Privacidad</a>
@@ -259,7 +259,7 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                         <a className="hover:text-primary cursor-pointer" onClick={(e) => { e.preventDefault(); }} href="#">Estado</a>
                         <a className="hover:text-primary cursor-pointer" onClick={(e) => { e.preventDefault(); }} href="#">Soporte</a>
                     </div>
-                    <p className="text-sm text-slate-400">© 2024 MiniSaaS Inc. Todos los derechos reservados.</p>
+                    <p className="text-sm text-slate-400">© 2024 YUPAY Inc. Todos los derechos reservados.</p>
                 </div>
             </footer>
         </div>

@@ -10,18 +10,26 @@ import StoreDashboard from '@/sections/StoreDashboard';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { LogOut, Clock, AlertTriangle, Crown, ShieldAlert } from 'lucide-react';
+import { LogOut, Clock, AlertTriangle, Crown, ShieldAlert, ShoppingCart, Store, Package, Heart, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 // Lista de emails autorizados para acceso admin
 // Puedes agregar más emails separados por coma en la variable de entorno
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dario775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dary775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
 
 function DashboardRouter() {
   const { user, subscription, logout, loginWithGoogle, isLoading } = useAuth();
   const [view, setView] = useState<'home' | 'login' | 'register' | 'terms'>('home');
   const [clientTab, setClientTab] = useState('shop');
+  const [cartCount, setCartCount] = useState(0);
+
+  // Escuchar cambios en el carrito
+  useEffect(() => {
+    const handleCountChange = (e: any) => setCartCount(e.detail || 0);
+    window.addEventListener('cart-count-changed', handleCountChange);
+    return () => window.removeEventListener('cart-count-changed', handleCountChange);
+  }, []);
 
   // Detectar si estamos en la ruta /admin
   const [isAdminRoute, setIsAdminRoute] = useState(false);
@@ -210,39 +218,38 @@ function DashboardRouter() {
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 gap-2">
-            {/* Logo */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-xs">M</span>
+            {/* Logo Yupay */}
+            <div className="flex items-center gap-2.5 shrink-0 group cursor-pointer" onClick={() => window.location.href = '/'}>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/20 group-hover:scale-110 transition-transform duration-500 ring-2 ring-white/10">
+                <span className="text-white font-black text-sm font-outfit">Y</span>
               </div>
-              <span className="font-bold text-lg text-gray-900 dark:text-white hidden sm:inline">MiniSaaS</span>
-              <Badge className={`capitalize text-xs ${user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                user.role === 'tienda' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                  'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                }`}>
-                {user.role}
-              </Badge>
+              <div className="flex flex-col">
+                <span className="font-black text-xl tracking-tighter text-gray-900 dark:text-white font-outfit leading-none mb-0.5">YUPAY</span>
+                <Badge className="h-3.5 text-[8px] px-1 uppercase font-black bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 border-0 w-fit">
+                  {user.role}
+                </Badge>
+              </div>
             </div>
 
             {/* Navegación Cliente - Centro */}
             {user.role === 'cliente' && (
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 p-0.5 rounded-full">
+              <div className="flex items-center gap-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md p-1 rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
                 {[
-                  { key: 'shop', icon: '🏪', label: 'Tienda' },
-                  { key: 'orders', icon: '📦', label: 'Pedidos' },
-                  { key: 'favorites', icon: '❤️', label: 'Favoritos' },
-                  { key: 'profile', icon: '👤', label: 'Perfil' }
+                  { key: 'shop', icon: Store, label: 'Tienda' },
+                  { key: 'orders', icon: Package, label: 'Pedidos' },
+                  { key: 'favorites', icon: Heart, label: 'Favoritos' },
+                  { key: 'profile', icon: User, label: 'Perfil' }
                 ].map(tab => (
                   <button
                     key={tab.key}
                     onClick={() => setClientTab(tab.key)}
-                    className={`px-2.5 py-1 rounded-full text-xs sm:text-sm transition-all ${clientTab === tab.key
-                      ? 'bg-white dark:bg-gray-600 shadow-sm font-medium'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${clientTab === tab.key
+                      ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25 scale-105'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                       }`}
                   >
-                    <span className="sm:mr-1">{tab.icon}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <tab.icon className={`h-4 w-4 ${clientTab === tab.key ? 'fill-white/20 animate-in zoom-in-50 duration-500' : ''}`} strokeWidth={2.5} />
+                    <span className="hidden lg:inline tracking-wide">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -250,6 +257,24 @@ function DashboardRouter() {
 
             {/* Derecha: Usuario y acciones */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {user.role === 'cliente' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-9 w-9 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                  onClick={() => {
+                    // Trigger cart opening event or use a global state
+                    window.dispatchEvent(new CustomEvent('toggle-cart'));
+                  }}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-violet-600 text-white border-0 text-[10px] animate-in zoom-in duration-300">
+                      {cartCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
               <ThemeToggle />
               <div className="hidden md:flex items-center gap-2">
                 {user.avatar && (
@@ -281,6 +306,7 @@ function DashboardRouter() {
       {/* Dashboard Content based on Role */}
       <main className="transition-colors duration-300 pb-20 sm:pb-0">
         <ErrorBoundary>
+          {user.role === 'admin' && <AdminDashboard />}
           {user.role === 'cliente' && <ClientDashboard activeTab={clientTab} />}
           {user.role === 'tienda' && <StoreDashboard />}
         </ErrorBoundary>
@@ -291,21 +317,56 @@ function DashboardRouter() {
         <div className="sm:hidden fixed bottom-6 left-4 right-4 z-50">
           <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-100 dark:border-white/10 shadow-2xl rounded-2xl p-1.5 flex items-center justify-around">
             {[
-              { key: 'shop', icon: '🏪', label: 'Tienda' },
-              { key: 'orders', icon: '📦', label: 'Pedidos' },
-              { key: 'favorites', icon: '❤️', label: 'Favoritos' },
-              { key: 'profile', icon: '👤', label: 'Perfil' }
+              { key: 'shop', icon: Store, label: 'Tienda' },
+              { key: 'orders', icon: Package, label: 'Pedidos' }
             ].map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setClientTab(tab.key)}
-                className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-all duration-300 ${clientTab === tab.key
-                  ? 'bg-violet-600 text-white shadow-lg'
-                  : 'text-gray-500 dark:text-gray-400 active:scale-95'
+                className={`flex flex-col items-center gap-1.5 py-1 px-3 transition-all duration-300 ${clientTab === tab.key
+                  ? 'text-violet-600 dark:text-violet-400 scale-110'
+                  : 'text-gray-400 dark:text-gray-500 active:scale-90'
                   }`}
               >
-                <span className="text-lg">{tab.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest">{tab.label}</span>
+                <div className={`p-2 rounded-xl transition-colors ${clientTab === tab.key ? 'bg-violet-600/10' : ''}`}>
+                  <tab.icon className="h-5 w-5" strokeWidth={clientTab === tab.key ? 2.5 : 2} />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-tighter">{tab.label}</span>
+              </button>
+            ))}
+
+            {/* Floating Cart Button for Mobile */}
+            <div className="relative -mt-12 group">
+              <div className="absolute inset-0 bg-violet-600 blur-xl opacity-20 group-active:opacity-40 transition-opacity"></div>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('toggle-cart'))}
+                className="relative bg-violet-600 text-white p-4 rounded-full shadow-2xl shadow-violet-500/40 active:scale-90 transition-all border-[6px] border-gray-50 dark:border-gray-950"
+              >
+                <ShoppingCart className="h-6 w-6" strokeWidth={2.5} />
+                {cartCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white border-2 border-white dark:border-gray-900 text-[10px] font-bold rounded-full animate-bounce shadow-lg">
+                    {cartCount}
+                  </Badge>
+                )}
+              </button>
+            </div>
+
+            {[
+              { key: 'favorites', icon: Heart, label: 'Favoritos' },
+              { key: 'profile', icon: User, label: 'Perfil' }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setClientTab(tab.key)}
+                className={`flex flex-col items-center gap-1.5 py-1 px-3 transition-all duration-300 ${clientTab === tab.key
+                  ? 'text-violet-600 dark:text-violet-400 scale-110'
+                  : 'text-gray-400 dark:text-gray-500 active:scale-90'
+                  }`}
+              >
+                <div className={`p-2 rounded-xl transition-colors ${clientTab === tab.key ? 'bg-violet-600/10' : ''}`}>
+                  <tab.icon className="h-5 w-5" strokeWidth={clientTab === tab.key ? 2.5 : 2} />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-tighter">{tab.label}</span>
               </button>
             ))}
           </div>

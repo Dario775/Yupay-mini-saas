@@ -15,7 +15,7 @@ export async function geocodeAddress(address: string): Promise<GeoLocation | nul
             {
                 headers: {
                     'Accept-Language': 'es',
-                    'User-Agent': 'MiniSaaS/1.0'
+                    'User-Agent': 'Yupay/1.0'
                 }
             }
         );
@@ -56,7 +56,7 @@ export async function searchAddresses(query: string, country: string = 'ar'): Pr
             {
                 headers: {
                     'Accept-Language': 'es',
-                    'User-Agent': 'MiniSaaS/1.0'
+                    'User-Agent': 'Yupay/1.0'
                 }
             }
         );
@@ -182,7 +182,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<GeoLocat
             {
                 headers: {
                     'Accept-Language': 'es',
-                    'User-Agent': 'MiniSaaS/1.0'
+                    'User-Agent': 'Yupay/1.0'
                 }
             }
         );

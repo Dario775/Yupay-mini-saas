@@ -145,6 +145,37 @@ CREATE TABLE IF NOT EXISTS payment_methods (
 );
 
 -- =============================================
+-- FLASH OFFERS TABLE (Ofertas Relámpago)
+-- =============================================
+CREATE TABLE IF NOT EXISTS flash_offers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    -- Productos (array de UUIDs)
+    product_ids UUID[],
+    -- Descuento
+    discount_type VARCHAR(20) CHECK (discount_type IN ('percentage', 'fixed')),
+    discount_value DECIMAL(10, 2) NOT NULL,
+    -- Tiempo
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    duration_hours INTEGER NOT NULL,
+    -- Alcance geográfico
+    radius_km INTEGER DEFAULT 5,
+    -- Límites
+    max_redemptions INTEGER,
+    current_redemptions INTEGER DEFAULT 0,
+    -- Estado
+    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'active', 'expired', 'cancelled')),
+    -- Notificaciones
+    notifications_sent INTEGER DEFAULT 0,
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================
 
@@ -157,6 +188,7 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shipping_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flash_offers ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read all, but only update their own
 CREATE POLICY "Profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
@@ -186,6 +218,15 @@ CREATE POLICY "Store owners can update orders" ON orders FOR UPDATE USING (
 
 -- Subscriptions: Users can view their own
 CREATE POLICY "Users can view own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+
+-- Flash Offers: Public read (active only), store owners can manage
+CREATE POLICY "Active flash offers are viewable by everyone" ON flash_offers FOR SELECT USING (
+    status = 'active' OR 
+    EXISTS (SELECT 1 FROM stores WHERE stores.id = flash_offers.store_id AND stores.owner_id = auth.uid())
+);
+CREATE POLICY "Store owners can manage flash offers" ON flash_offers FOR ALL USING (
+    EXISTS (SELECT 1 FROM stores WHERE stores.id = flash_offers.store_id AND stores.owner_id = auth.uid())
+);
 
 -- =============================================
 -- AUTO-CREATE PROFILE ON SIGNUP (Trigger)

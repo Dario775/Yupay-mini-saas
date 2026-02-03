@@ -14,7 +14,7 @@ export default function Terms({ onBack }: { onBack: () => void }) {
                         Volver
                     </Button>
                     <div className="mr-4 hidden md:flex">
-                        <h1 className="text-lg font-bold">Kimi Mini SaaS</h1>
+                        <h1 className="text-lg font-bold">YUPAY</h1>
                     </div>
                 </div>
             </header>
@@ -41,17 +41,17 @@ export default function Terms({ onBack }: { onBack: () => void }) {
 
                             <div className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300 space-y-4">
                                 <p>
-                                    Bienvenido a Kimi Mini SaaS. Estos términos y condiciones describen las reglas y regulaciones para el uso de nuestro sitio web y servicios.
+                                    Bienvenido a YUPAY. Estos términos y condiciones describen las reglas y regulaciones para el uso de nuestro sitio web y servicios.
                                 </p>
 
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">1. Aceptación de los Términos</h3>
                                 <p>
-                                    Al acceder a este sitio web, asumimos que aceptas estos términos y condiciones. No continúes usando Kimi Mini SaaS si no estás de acuerdo con todos los términos y condiciones establecidos en esta página.
+                                    Al acceder a este sitio web, asumimos que aceptas estos términos y condiciones. No continúes usando YUPAY si no estás de acuerdo con todos los términos y condiciones establecidos en esta página.
                                 </p>
 
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">2. Servicios Ofrecidos</h3>
                                 <p>
-                                    Kimi Mini SaaS proporciona una plataforma para que las pequeñas y medianas empresas (PYMES) gestionen sus tiendas en línea, productos, pedidos e interactúen con sus clientes. Nos reservamos el derecho de retirar o enmendar nuestros servicios sin previo aviso.
+                                    YUPAY proporciona una plataforma para que las pequeñas y medianas empresas (PYMES) gestionen sus tiendas en línea, productos, pedidos e interactúen con sus clientes. Nos reservamos el derecho de retirar o enmendar nuestros servicios sin previo aviso.
                                 </p>
 
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">3. Cuentas de Usuario</h3>
@@ -61,7 +61,7 @@ export default function Terms({ onBack }: { onBack: () => void }) {
 
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">4. Propiedad Intelectual</h3>
                                 <p>
-                                    El servicio y sus contenidos originales, características y funcionalidad son y seguirán siendo propiedad exclusiva de Kimi Mini SaaS y sus licenciantes.
+                                    El servicio y sus contenidos originales, características y funcionalidad son y seguirán siendo propiedad exclusiva de YUPAY y sus licenciantes.
                                 </p>
                             </div>
                         </section>
@@ -79,7 +79,7 @@ export default function Terms({ onBack }: { onBack: () => void }) {
 
                             <div className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300 space-y-4">
                                 <p>
-                                    Tu privacidad es importante para nosotros. Es política de Kimi Mini SaaS respetar tu privacidad con respecto a cualquier información que podamos recopilar mientras operamos nuestro sitio web.
+                                    Tu privacidad es importante para nosotros. Es política de YUPAY respetar tu privacidad con respecto a cualquier información que podamos recopilar mientras operamos nuestro sitio web.
                                 </p>
 
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">1. Información que Recopilamos</h3>
@@ -120,7 +120,7 @@ export default function Terms({ onBack }: { onBack: () => void }) {
             {/* Footer */}
             <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-10 mt-10">
                 <div className="container max-w-4xl mx-auto px-4 text-center text-sm text-gray-500">
-                    <p>&copy; 2024 Kimi Mini SaaS. Todos los derechos reservados.</p>
+                    <p>&copy; 2024 YUPAY. Todos los derechos reservados.</p>
                 </div>
             </footer>
         </div>

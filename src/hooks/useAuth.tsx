@@ -20,14 +20,51 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Lista de emails autorizados como admin (sincronizada con App.tsx)
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dario775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dary775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
 
 // Detectar si un email es de admin
 const isAdminEmail = (email: string) => ADMIN_EMAILS.includes(email.toLowerCase());
 
-// Usuarios demo para cuando Supabase no está configurado (SIN datos precargados)
+// Usuarios demo para pruebas locales (sin Supabase)
 const DEMO_USERS: Record<string, { user: User; store?: Store; subscription?: Subscription }> = {
-  // Solo usuarios demo básicos, sin productos ni órdenes
+  'admin@demo.com': {
+    user: { id: 'admin-1', email: 'admin@demo.com', name: 'Administrador', role: 'admin', createdAt: new Date(), isActive: true },
+  },
+  'cliente@demo.com': {
+    user: { id: 'cliente-1', email: 'cliente@demo.com', name: 'Cliente Demo', role: 'cliente', createdAt: new Date(), isActive: true },
+  },
+  'tienda@demo.com': {
+    user: { id: 'tienda-1', email: 'tienda@demo.com', name: 'Tienda Demo', role: 'tienda', createdAt: new Date(), isActive: true },
+    store: {
+      id: 'store-demo-1',
+      ownerId: 'tienda-1',
+      name: 'Mi Tienda',
+      description: 'Tienda de prueba',
+      category: 'General',
+      address: 'Dirección Demo',
+      phone: '+54 11 1234',
+      email: 'tienda@demo.com',
+      isActive: true,
+      rating: 0,
+      createdAt: new Date(),
+      shippingMethods: [],
+      paymentMethods: []
+    },
+    subscription: {
+      id: 'sub-demo-1',
+      userId: 'tienda-1',
+      storeId: 'store-demo-1',
+      plan: 'profesional',
+      status: 'trial',
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      price: 0,
+      autoRenew: true,
+      salesThisMonth: 0,
+      lastResetDate: new Date()
+    },
+  },
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

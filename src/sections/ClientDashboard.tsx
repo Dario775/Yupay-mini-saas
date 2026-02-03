@@ -34,7 +34,11 @@ import {
   ArrowRight,
   Navigation,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  Timer,
+  ShieldCheck,
+  Headset,
+  History
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,7 +59,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useClientData } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
-import type { Product, Order, GeoLocation } from '@/types';
+import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
 import { toast } from 'sonner';
 import { searchAddresses, getCurrentPosition, reverseGeocode, formatDistance, calculateDistance } from '@/lib/geo';
 import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
@@ -78,13 +82,40 @@ function OrderStatusBadge({ status }: { status: Order['status'] }) {
   );
 }
 
+const getTimeRemaining = (endDate: Date) => {
+  const now = new Date();
+  const diff = new Date(endDate).getTime() - now.getTime();
+  if (diff <= 0) return 'Expirada';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+};
+
+function ProductTimer({ endDate }: { endDate: Date }) {
+  const [time, setTime] = useState(getTimeRemaining(endDate));
+  useEffect(() => {
+    const interval = setInterval(() => setTime(getTimeRemaining(endDate)), 1000);
+    return () => clearInterval(interval);
+  }, [endDate]);
+
+  return (
+    <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-lg bg-yellow-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-lg animate-pulse">
+      <Timer className="h-3 w-3" />
+      {time}
+    </div>
+  );
+}
+
 function ProductCard({
   product,
   onAddToCart,
   isFavorite,
   onToggleFavorite,
   onView,
-  distance
+  distance,
+  flashOffer
 }: {
   product: Product;
   onAddToCart: (product: Product) => void;
@@ -92,9 +123,19 @@ function ProductCard({
   onToggleFavorite: (id: string) => void;
   onView: (product: Product) => void;
   distance?: number;
+  flashOffer?: FlashOffer;
 }) {
+  const hasFlash = !!flashOffer;
+  const discountedPrice = hasFlash
+    ? flashOffer.discountType === 'percentage'
+      ? product.price * (1 - flashOffer.discountValue / 100)
+      : product.price - flashOffer.discountValue
+    : product.isOnSale && product.discount
+      ? product.price * (1 - product.discount / 100)
+      : null;
+
   return (
-    <Card className="group relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl">
+    <Card className={`group relative overflow-hidden bg-white dark:bg-gray-900 border ${hasFlash ? 'border-yellow-400 shadow-yellow-100 dark:shadow-yellow-900/10' : 'border-gray-100 dark:border-gray-800'} shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl`}>
       {/* Favorite Button */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
@@ -102,6 +143,9 @@ function ProductCard({
       >
         <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
       </button>
+
+      {/* Flash Timer */}
+      {hasFlash && <ProductTimer endDate={flashOffer.endDate} />}
 
       {/* Image Area */}
       <div
@@ -120,13 +164,21 @@ function ProductCard({
           </div>
         )}
 
-        {/* Distance Badge */}
-        {distance !== undefined && (
-          <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-[9px] font-bold text-white flex items-center gap-1">
-            <MapPin className="h-2.5 w-2.5" />
-            {formatDistance(distance)}
-          </div>
-        )}
+        {/* Badges Overlay */}
+        <div className="absolute bottom-2 left-2 flex flex-col gap-1">
+          {distance !== undefined && (
+            <div className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-[9px] font-bold text-white flex items-center gap-1">
+              <MapPin className="h-2.5 w-2.5" />
+              {formatDistance(distance)}
+            </div>
+          )}
+          {hasFlash && (
+            <Badge className="bg-yellow-500 text-white text-[9px] border-none shadow-sm">
+              <Zap className="h-2.5 w-2.5 mr-1" />
+              OFERTA FLASH
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -137,14 +189,23 @@ function ProductCard({
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-violet-600 dark:text-violet-400">${product.price}</p>
+          <div className="flex flex-col">
+            {discountedPrice ? (
+              <>
+                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">${discountedPrice.toFixed(0)}</p>
+                <p className="text-[10px] text-gray-400 line-through">${product.price}</p>
+              </>
+            ) : (
+              <p className="text-sm font-bold text-gray-900 dark:text-white">${product.price}</p>
+            )}
+          </div>
           <Button
             size="sm"
-            className="h-7 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full gap-1"
-            onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
+            className={`h-7 px-3 ${hasFlash ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-violet-600 hover:bg-violet-700'} text-white text-[10px] font-bold rounded-full gap-1`}
+            onClick={(e) => { e.stopPropagation(); onAddToCart({ ...product, price: discountedPrice || product.price } as Product); }}
             disabled={product.stock === 0}
           >
-            <Plus className="h-3 w-3" />
+            {hasFlash ? <Zap className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
             Añadir
           </Button>
         </div>
@@ -159,7 +220,10 @@ interface ClientDashboardProps {
 
 export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardProps) {
   const { user } = useAuth();
-  const { orders, products, stores, favorites, createOrder, cancelOrder, toggleFavorite, isFavorite } = useClientData(user?.id || '2');
+  const {
+    orders, products, stores, favorites, flashOffers,
+    createOrder, cancelOrder, toggleFavorite, isFavorite
+  } = useClientData(user?.id || '2');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -167,6 +231,13 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState<string | null>(null);
+
+  // Escuchar evento para abrir el carrito desde la barra de navegación superior
+  useEffect(() => {
+    const handleToggleCart = () => setIsCartOpen(prev => !prev);
+    window.addEventListener('toggle-cart', handleToggleCart);
+    return () => window.removeEventListener('toggle-cart', handleToggleCart);
+  }, []);
 
   // Estados para ubicación
   const [userLocation, setUserLocation] = useState<GeoLocation | null>(user?.location || null);
@@ -195,7 +266,10 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
         );
       }
 
-      return { ...product, distance, storeLocation: productStore?.location };
+      // Buscar oferta flash activa para este producto
+      const flashOffer = flashOffers?.find(o => o.status === 'active' && o.productIds.includes(product.id));
+
+      return { ...product, distance, storeLocation: productStore?.location, flashOffer };
     })
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -258,6 +332,11 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
 
   const cartTotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const cartItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Sincronizar conteo de carrito con la UI global (App.tsx)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('cart-count-changed', { detail: cartItemsCount }));
+  }, [cartItemsCount]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -366,6 +445,53 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
               </Button>
             </div>
 
+            {/* Active Flash Offers Section */}
+            {flashOffers?.filter(o => o.status === 'active').length > 0 && (
+              <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-1000">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-yellow-500 text-white shadow-lg shadow-yellow-500/20">
+                      <Zap className="h-5 w-5 fill-current" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">Ofertas Flash</h2>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">¡Solo por tiempo limitado!</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 animate-pulse">
+                    En Directo
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {products
+                    .filter(p => flashOffers.some(o => o.status === 'active' && o.productIds.includes(p.id)))
+                    .map(product => {
+                      const offer = flashOffers.find(o => o.status === 'active' && o.productIds.includes(product.id));
+                      const productStore = stores.find(s => s.id === product.storeId);
+                      let distance: number | undefined;
+                      if (userLocation && productStore?.location) {
+                        distance = calculateDistance(userLocation.lat, userLocation.lng, productStore.location.lat, productStore.location.lng);
+                      }
+
+                      return (
+                        <ProductCard
+                          key={`flash-${product.id}`}
+                          product={product}
+                          onAddToCart={addToCart}
+                          isFavorite={isFavorite(product.id)}
+                          onToggleFavorite={handleToggleFavorite}
+                          onView={setSelectedProduct}
+                          distance={distance}
+                          flashOffer={offer}
+                        />
+                      );
+                    })}
+                </div>
+                <Separator className="mt-10" />
+              </div>
+            )}
+
             {/* Categories - Minimalist Pill Design */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
               {categories.map((cat) => (
@@ -393,6 +519,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
                   onToggleFavorite={handleToggleFavorite}
                   onView={setSelectedProduct}
                   distance={product.distance}
+                  flashOffer={product.flashOffer}
                 />
               ))}
             </div>
@@ -405,20 +532,47 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
               </div>
             )}
 
-            {/* Benefits Section */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+            {/* Benefits Section - Premium Refactor */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 mb-16">
               {[
-                { icon: Truck, title: 'Envío Gratis', desc: 'En compras mayores a $2000', color: 'from-blue-500 to-cyan-500' },
-                { icon: Shield, title: 'Compra Segura', desc: 'Protección garantizada', color: 'from-green-500 to-emerald-500' },
-                { icon: RefreshCw, title: '30 Días', desc: 'Para cambios y devoluciones', color: 'from-purple-500 to-pink-500' },
-                { icon: Headphones, title: 'Soporte 24/7', desc: 'Estamos para ayudarte', color: 'from-amber-500 to-orange-500' },
+                {
+                  icon: ShieldCheck,
+                  title: 'Compra Protegida',
+                  desc: 'Garantía oficial en todos los productos',
+                  color: 'from-emerald-400 to-cyan-500',
+                  bg: 'bg-emerald-500/10'
+                },
+                {
+                  icon: History,
+                  title: 'Cambios Sin Vueltas',
+                  desc: '30 días para devoluciones gratuitas',
+                  color: 'from-violet-400 to-purple-600',
+                  bg: 'bg-violet-500/10'
+                },
+                {
+                  icon: Headset,
+                  title: 'Soporte VIP 24/7',
+                  desc: 'Asistencia inmediata por expertos',
+                  color: 'from-amber-400 to-orange-600',
+                  bg: 'bg-amber-500/10'
+                },
               ].map((benefit, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${benefit.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <benefit.icon className="h-6 w-6 text-white" />
+                <div
+                  key={i}
+                  className="relative group bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 hover:border-violet-200 dark:hover:border-violet-900/50 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-500 overflow-hidden"
+                >
+                  <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full ${benefit.bg} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${benefit.color} flex items-center justify-center mb-6 shadow-lg shadow-current/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
+                    <benefit.icon className="h-7 w-7 text-white" />
                   </div>
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-1">{benefit.title}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{benefit.desc}</p>
+
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                    {benefit.title}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    {benefit.desc}
+                  </p>
                 </div>
               ))}
             </div>

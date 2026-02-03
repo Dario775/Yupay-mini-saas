@@ -116,9 +116,11 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <Store className="h-10 w-10 text-blue-600" />
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">MiniSaaS</h1>
+                    <div className="flex items-center justify-center gap-3 mb-4 group">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-violet-500/20 group-hover:scale-110 transition-transform duration-500 ring-4 ring-white dark:ring-gray-800">
+                            <span className="text-2xl font-black font-outfit">Y</span>
+                        </div>
+                        <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent font-outfit">YUPAY</h1>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400">Crea tu tienda online en minutos</p>
                 </div>

@@ -62,6 +62,7 @@ export default {
       fontFamily: {
         display: ["Plus Jakarta Sans", "sans-serif"],
         sans: ["Inter", "sans-serif"],
+        outfit: ["Outfit", "sans-serif"],
       },
       borderRadius: {
         lg: 'var(--radius)',

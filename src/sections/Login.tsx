@@ -20,6 +20,16 @@ import type { UserRole } from '@/types';
 
 const ROLES = [
   {
+    id: 'admin' as UserRole,
+    title: 'Administrador',
+    description: 'Gestiona suscripciones y usuarios',
+    icon: Shield,
+    color: 'from-violet-500 to-purple-600',
+    bgColor: 'bg-violet-50 dark:bg-violet-900/10',
+    borderColor: 'border-violet-100 dark:border-violet-900/50',
+    demoEmail: 'admin@demo.com',
+  },
+  {
     id: 'cliente' as UserRole,
     title: 'Cliente',
     description: 'Compra productos y gestiona pedidos',
@@ -108,13 +118,13 @@ export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogi
         <div className="p-8 relative z-10">
           {/* Header */}
           <div className="flex flex-col items-center mb-8">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg mb-6 border border-gray-100 dark:border-gray-700">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-xl">M</span>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-xl mb-6 border border-gray-100 dark:border-gray-700 group">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/20 group-hover:rotate-12 transition-all duration-500 ring-4 ring-gray-50 dark:ring-gray-900">
+                <span className="text-white font-black text-2xl font-outfit">Y</span>
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-              {step === 'role' ? 'Bienvenido' : 'Iniciar Sesión'}
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white text-center tracking-tighter font-outfit">
+              {step === 'role' ? 'BIENVENIDO' : 'INICIAR SESIÓN'}
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 mt-2 text-sm">
               {step === 'role'
@@ -180,7 +190,7 @@ export default function Login({ onLogin, onRegister, onBack, onTerms }: { onLogi
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white h-11 rounded-xl focus:ring-blue-500/20 ${errors.email ? 'border-red-500 ring-red-500/20' : ''}`}
-                    placeholder="ejemplo@minisaas.com"
+                    placeholder="ejemplo@yupay.com"
                   />
                   {errors.email && (
                     <div className="flex items-center gap-1 mt-1.5 text-red-500 text-[10px] uppercase font-bold tracking-wider ml-1">
