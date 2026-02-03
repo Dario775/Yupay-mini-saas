@@ -356,7 +356,7 @@ export default function StoreDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-4 md:p-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-2 sm:p-4 md:p-6 transition-colors duration-300">
       {/* Header Compacto */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -395,10 +395,10 @@ export default function StoreDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg">
-          <TabsTrigger value="products" className="flex-1 text-[10px] sm:text-xs py-2"><Package className="h-3 w-3 mr-1.5" />Stock</TabsTrigger>
-          <TabsTrigger value="orders" className="flex-1 text-[10px] sm:text-xs py-2"><ShoppingCart className="h-3 w-3 mr-1.5" />Ventas</TabsTrigger>
-          <TabsTrigger value="flash" className="flex-1 text-[10px] sm:text-xs py-2 relative">
+        <TabsList className="flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg justify-start sm:justify-center">
+          <TabsTrigger value="products" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Package className="h-3 w-3 mr-1.5" />Stock</TabsTrigger>
+          <TabsTrigger value="orders" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><ShoppingCart className="h-3 w-3 mr-1.5" />Ventas</TabsTrigger>
+          <TabsTrigger value="flash" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0 relative">
             <Zap className="h-3 w-3 mr-1.5 text-yellow-500" />Flash
             {activeFlashOffers.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 text-white text-[8px] rounded-full flex items-center justify-center">
@@ -406,10 +406,10 @@ export default function StoreDashboard() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="shipping" className="flex-1 text-[10px] sm:text-xs py-2"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
-          <TabsTrigger value="payments" className="flex-1 text-[10px] sm:text-xs py-2"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
-          <TabsTrigger value="analytics" className="flex-1 text-[10px] sm:text-xs py-2"><BarChart3 className="h-3 w-3 mr-1.5" />Stats</TabsTrigger>
-          <TabsTrigger value="settings" className="flex-1 text-[10px] sm:text-xs py-2"><Home className="h-3 w-3 mr-1.5" />Ajustes</TabsTrigger>
+          <TabsTrigger value="shipping" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
+          <TabsTrigger value="payments" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><BarChart3 className="h-3 w-3 mr-1.5" />Stats</TabsTrigger>
+          <TabsTrigger value="settings" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Home className="h-3 w-3 mr-1.5" />Ajustes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">

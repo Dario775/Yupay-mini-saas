@@ -19,8 +19,8 @@ const PLAN_FEATURES_MAP: Record<string, {
 }> = {
     free: {
         name: "Gratis",
-        description: "Ideal para pequeños negocios y emprendedores que comienzan.",
-        buttonText: "Comenzar gratis",
+        description: "Ideal si estás probando. ¡Es GRATIS para siempre y muy FÁCIL!",
+        buttonText: "¡SÍ, LO QUIERO GRATIS YA!",
         buttonVariant: "outline",
         features: [
             { text: "Hasta 10 productos", icon: <Briefcase size={20} /> },
@@ -36,8 +36,8 @@ const PLAN_FEATURES_MAP: Record<string, {
     },
     basico: {
         name: "Básico",
-        description: "La mejor opción para negocios que están arrancando.",
-        buttonText: "Elegir Básico",
+        description: "Para los que quieren dar el salto. RÁPIDO y sin complicaciones.",
+        buttonText: "¡LO QUIERO YA!",
         buttonVariant: "default",
         features: [
             { text: "Hasta 100 productos", icon: <Briefcase size={20} /> },
@@ -53,8 +53,8 @@ const PLAN_FEATURES_MAP: Record<string, {
     },
     profesional: {
         name: "Profesional",
-        description: "Mejor valor para negocios en crecimiento con funciones avanzadas.",
-        buttonText: "Comenzar ahora",
+        description: "Nuestra opción favorita. Todo incluido para que vendas como un pro.",
+        buttonText: "¡PROBAR GRATIS YA!",
         buttonVariant: "default",
         popular: true,
         features: [
@@ -203,7 +203,7 @@ export default function PricingSection() {
                     customVariants={revealVariants}
                     className="md:text-6xl sm:text-4xl text-3xl font-bold text-gray-900 dark:text-white mb-4"
                 >
-                    Planes que mejor se adaptan a tu{" "}
+                    Planes GRATIS, FÁCILES y hechos para ti{" "}
                     <TimelineContent
                         as="span"
                         animationNum={1}
@@ -222,8 +222,8 @@ export default function PricingSection() {
                     customVariants={revealVariants}
                     className="sm:text-lg text-base text-gray-600 dark:text-gray-400 sm:w-[70%] w-[80%] mx-auto"
                 >
-                    Con la confianza de millones. Ayudamos a equipos en todo el mundo.
-                    Explora qué opción es la adecuada para ti.
+                    ¡Estamos aquí para ayudarte a crecer!
+                    Elige el plan que te haga más feliz.
                 </TimelineContent>
             </div>
 

@@ -190,9 +190,26 @@ ALTER TABLE shipping_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flash_offers ENABLE ROW LEVEL SECURITY;
 
--- Profiles: Users can read all, but only update their own
-CREATE POLICY "Profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+-- Profiles: Users see their own profile.
+-- Note: Use a separate secure view or function if public data (name/avatar) needs to be exposed globally.
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+
+-- Allow store owners to view profiles of customers who have active orders with them
+CREATE POLICY "Store owners can view customer profiles" ON profiles FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM orders o
+        JOIN stores s ON s.id = o.store_id
+        WHERE o.customer_id = profiles.id 
+        AND s.owner_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Users can update own details" ON profiles FOR UPDATE 
+USING (auth.uid() = id)
+WITH CHECK (
+    auth.uid() = id AND 
+    (CASE WHEN role IS DISTINCT FROM (SELECT role FROM profiles WHERE id = auth.uid()) THEN false ELSE true END)
+);
 
 -- Stores: Public read, owners can modify
 CREATE POLICY "Stores are viewable by everyone" ON stores FOR SELECT USING (true);
@@ -239,7 +256,11 @@ BEGIN
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'cliente')
+        -- SEGURIDAD: Solo permite roles 'tienda' o 'cliente'. 'admin' debe ser asignado manualmente.
+        CASE 
+            WHEN NEW.raw_user_meta_data->>'role' = 'tienda' THEN 'tienda'
+            ELSE 'cliente'
+        END
     );
     RETURN NEW;
 END;

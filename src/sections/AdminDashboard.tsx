@@ -325,7 +325,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-4 md:p-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-2 sm:p-4 md:p-6 transition-colors duration-300">
       {/* Header Premium */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid Premium */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 mb-8">
         <StatCard
           title="Usuarios Totales"
           value={stats.totalUsers.toString()}
@@ -379,12 +379,12 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="subscriptions" className="space-y-6">
-        <TabsList className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg p-1 rounded-xl">
-          <TabsTrigger value="subscriptions" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md"><CreditCard className="h-4 w-4 mr-2" />Suscripciones</TabsTrigger>
-          <TabsTrigger value="stores" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md"><Store className="h-4 w-4 mr-2" />Tiendas</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md"><Users className="h-4 w-4 mr-2" />Usuarios</TabsTrigger>
-          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md"><TrendingUp className="h-4 w-4 mr-2" />Analíticas</TabsTrigger>
-          <TabsTrigger value="config" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md"><Filter className="h-4 w-4 mr-2" />Configuración</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto scrollbar-hide bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-lg p-1 rounded-xl justify-start sm:justify-center">
+          <TabsTrigger value="subscriptions" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><CreditCard className="h-4 w-4 mr-2" />Suscripciones</TabsTrigger>
+          <TabsTrigger value="stores" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Store className="h-4 w-4 mr-2" />Tiendas</TabsTrigger>
+          <TabsTrigger value="users" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Users className="h-4 w-4 mr-2" />Usuarios</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><TrendingUp className="h-4 w-4 mr-2" />Analíticas</TabsTrigger>
+          <TabsTrigger value="config" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Filter className="h-4 w-4 mr-2" />Configuración</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subscriptions">

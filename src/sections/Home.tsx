@@ -40,10 +40,10 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                         </button>
                         <button
                             onClick={onRegister}
-                            className="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95"
+                            className="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 uppercase tracking-tight"
                         >
-                            <span className="hidden sm:inline">Empezar ahora</span>
-                            <span className="sm:hidden">Crear</span>
+                            <span className="hidden sm:inline">Vende GRATIS YA</span>
+                            <span className="sm:hidden">GRATIS</span>
                         </button>
                     </div>
                 </div>
@@ -58,20 +58,20 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                             </span>
-                            Ahora con Creación de Tiendas con IA
+                            ¡GRATIS! Tu tienda lista en un abrir y cerrar de ojos YA
                         </div>
                         <h1 className="text-5xl lg:text-7xl font-extrabold font-display tracking-tight leading-[1.1] mb-6">
-                            Impulsa tu Negocio con la plataforma <span className="gradient-text">Definitiva</span> de E-commerce
+                            Tu negocio online, FÁCIL, RÁPIDO y <span className="gradient-text">GRATIS</span>. Sin vueltas.
                         </h1>
                         <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-xl leading-relaxed">
-                            El espacio de trabajo todo en uno para construir, gestionar y escalar tu tienda online. Obtén analíticas potentes, gestión de inventario y pagos globales en un solo lugar.
+                            Olvídate de las complicaciones. Con YUPAY creas tu tienda, subes tus productos y empiezas a vender en minutos. <strong>¡Es totalmente GRATIS y puedes empezar YA mismo!</strong>
                         </p>
                         <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
                             <button
                                 onClick={onRegister}
                                 className="w-full sm:w-auto bg-primary hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-primary/30"
                             >
-                                Prueba Gratuita
+                                Empieza GRATIS YA
                                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
                             </button>
                             <button className="w-full sm:w-auto glass bg-white/10 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-white/20">
@@ -175,16 +175,16 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
             <section id="features" className="py-24 px-6 relative">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-extrabold font-display mb-4">Funciones Potentes para el Retail Moderno</h2>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Todo lo que necesitas para operar una tienda online de alto rendimiento, impulsada por tecnología de vanguardia.</p>
+                        <h2 className="text-4xl font-extrabold font-display mb-4">Todo lo que necesitas, sin complicaciones</h2>
+                        <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Queremos que tu negocio crezca hoy mismo. Por eso, te damos las herramientas más potentes de la forma más sencilla.</p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
                         <div className="group p-8 rounded-3xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-indigo-500/50 transition-all hover:shadow-2xl hover:shadow-indigo-500/10">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-indigo-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
                                 <span className="material-symbols-outlined text-[28px]">bolt</span>
                             </div>
-                            <h3 className="text-xl font-bold mb-3">Configuración Ultra Rápida</h3>
-                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">Empieza a vender en minutos. Nuestro asistente intuitivo y constructor drag-and-drop lo hace fácil.</p>
+                            <h3 className="text-xl font-bold mb-3">Súper FÁCIL y RÁPIDO</h3>
+                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">No necesitas ser un experto. Con nuestro asistente, tendrás tu tienda funcionando antes de que termines tu café.</p>
                             <a className="text-primary font-bold inline-flex items-center gap-2 group/link" href="#">
                                 Saber más
                                 <span className="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">chevron_right</span>
@@ -194,8 +194,8 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-500 to-purple-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform">
                                 <span className="material-symbols-outlined text-[28px]">psychology</span>
                             </div>
-                            <h3 className="text-xl font-bold mb-3">Insights Impulsados por IA</h3>
-                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">Recomendaciones inteligentes para optimizar tu embudo de ventas y retención de clientes.</p>
+                            <h3 className="text-xl font-bold mb-3">Consejos para vender más</h3>
+                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">Te ayudamos a entender qué buscan tus clientes para que puedas vender cada día un poquito más.</p>
                             <a className="text-primary font-bold inline-flex items-center gap-2 group/link" href="#">
                                 Saber más
                                 <span className="material-symbols-outlined text-[18px] group-hover/link:translate-x-1 transition-transform">chevron_right</span>
@@ -228,14 +228,14 @@ export default function Home({ onLogin, onRegister, onTerms }: HomeProps) {
                         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_50%,rgba(99,102,241,0.4),transparent)]"></div>
                         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_50%,rgba(192,132,252,0.4),transparent)]"></div>
                     </div>
-                    <h2 className="text-4xl lg:text-5xl font-extrabold font-display text-white mb-6 relative z-10">¿Listo para transformar tu negocio?</h2>
-                    <p className="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto relative z-10 opacity-90">Únete a miles de comerciantes que están haciendo crecer su marca con YUPAY. No requiere tarjeta para empezar.</p>
+                    <h2 className="text-4xl lg:text-5xl font-extrabold font-display text-white mb-6 relative z-10">¿Te animas a vender más YA?</h2>
+                    <p className="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto relative z-10 opacity-90">Súmate a miles de emprendedores que ya están cumpliendo sus sueños con YUPAY. <strong>¡Es GRATIS y te va a encantar!</strong></p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
                         <button
                             onClick={onRegister}
                             className="w-full sm:w-auto bg-white text-indigo-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-50 transition-colors shadow-2xl"
                         >
-                            Empezar Ahora
+                            Empieza GRATIS YA
                         </button>
                         <button className="w-full sm:w-auto bg-white/10 text-white border border-white/20 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/20 transition-colors">
                             Hablar con Ventas

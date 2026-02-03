@@ -122,7 +122,7 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                         </div>
                         <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent font-outfit">YUPAY</h1>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400">Crea tu tienda online en minutos</p>
+                    <p className="text-gray-600 dark:text-gray-400 font-bold">Crea tu tienda online GRATIS, FÁCIL y RÁPIDO YA</p>
                 </div>
 
                 {/* Progress Steps */}
@@ -147,10 +147,10 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                     <Card className="dark:bg-gray-800 dark:border-gray-700 shadow-xl">
                         <CardHeader>
                             <CardTitle className="dark:text-white flex items-center gap-2">
-                                <Rocket className="h-5 w-5 text-blue-500" />
-                                Información de tu tienda
+                                <Rocket className="h-5 w-5 text-violet-500" />
+                                ¡Súper! Empecemos con tu tienda
                             </CardTitle>
-                            <CardDescription>Cuéntanos sobre tu negocio</CardDescription>
+                            <CardDescription>Cuéntanos un poquito sobre tu gran idea para empezar YA</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,10 +245,7 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                     <div className="space-y-6">
                         <div className="text-center">
                             <h2 className="text-2xl font-bold dark:text-white">Elige tu plan</h2>
-                            <p className="text-gray-600 dark:text-gray-400 mt-2">
-                                <Clock className="inline h-4 w-4 mr-1" />
-                                <span className="font-medium text-purple-600">14 días de prueba gratis</span> en cualquier plan pagado
-                            </p>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">🎁 ¡Te regalamos 14 días GRATIS YA!</span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -306,7 +303,7 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                             <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white mb-4">
                                 <Check className="h-8 w-8" />
                             </div>
-                            <CardTitle className="dark:text-white text-2xl">¡Todo listo!</CardTitle>
+                            <CardTitle className="dark:text-white text-2xl">¡Vas a triunfar YA!</CardTitle>
                             <CardDescription>Confirma los datos de tu tienda</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -344,9 +341,9 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
 
                             <div className="flex gap-3 pt-4">
                                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="h-4 w-4 mr-2" />Atrás</Button>
-                                <Button onClick={handleRegister} disabled={isLoading} className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
+                                <Button onClick={handleRegister} disabled={isLoading} className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-bold shadow-lg shadow-violet-500/20">
                                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Rocket className="h-4 w-4 mr-2" />}
-                                    Crear mi tienda
+                                    EMPEZAR GRATIS YA
                                 </Button>
                             </div>
                         </CardContent>

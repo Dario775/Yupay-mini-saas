@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import Home from '@/sections/Home';
 import Login from '@/sections/Login';
@@ -7,6 +8,7 @@ import Terms from '@/sections/Terms';
 import AdminDashboard from '@/sections/AdminDashboard';
 import ClientDashboard from '@/sections/ClientDashboard';
 import StoreDashboard from '@/sections/StoreDashboard';
+import PublicStore from '@/sections/PublicStore';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -15,296 +17,207 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 // Lista de emails autorizados para acceso admin
-// Puedes agregar más emails separados por coma en la variable de entorno
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dary775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
 
-function DashboardRouter() {
-  const { user, subscription, logout, loginWithGoogle, isLoading } = useAuth();
-  const [view, setView] = useState<'home' | 'login' | 'register' | 'terms'>('home');
+function LoginWrapper() {
+  const navigate = useNavigate();
+  return (
+    <Login
+      onLogin={() => navigate('/dashboard')}
+      onRegister={() => navigate('/register')}
+      onBack={() => navigate('/')}
+      onTerms={() => navigate('/terms')}
+    />
+  );
+}
+
+function RegisterWrapper() {
+  const navigate = useNavigate();
+  return (
+    <Register
+      onBack={() => navigate('/')}
+      onSuccess={() => navigate('/login')}
+    />
+  );
+}
+
+function HomeWrapper() {
+  const navigate = useNavigate();
+  return (
+    <Home
+      onLogin={() => navigate('/login')}
+      onRegister={() => navigate('/register')}
+      onTerms={() => navigate('/terms')}
+    />
+  );
+}
+
+function TermsWrapper() {
+  const navigate = useNavigate();
+  return <Terms onBack={() => navigate(-1)} />;
+}
+
+function AdminRoute() {
+  const { user, loginWithGoogle, isLoading, logout } = useAuth();
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-violet-900 to-indigo-900 p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+            <ShieldAlert className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Panel de Administración
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">
+            Acceso restringido. Inicia sesión con tu cuenta autorizada.
+          </p>
+          <Button
+            onClick={loginWithGoogle}
+            disabled={isLoading}
+            className="w-full h-12 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-xl font-medium flex items-center justify-center gap-3"
+          >
+            {isLoading ? 'Verificando...' : 'Continuar con Google'}
+          </Button>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isAuthorizedAdmin = user && ADMIN_EMAILS.includes(user.email.toLowerCase());
+
+  if (!isAuthorizedAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 via-red-800 to-rose-900 p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <ShieldAlert className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Acceso Denegado
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-2 text-sm">
+            El email <span className="font-medium text-gray-700 dark:text-gray-300">{user.email}</span> no tiene permisos de administrador.
+          </p>
+          <div className="flex gap-3 mt-6">
+            <Button onClick={logout} variant="outline" className="flex-1">Cerrar sesión</Button>
+            <Button onClick={() => window.location.href = '/'} className="flex-1">Ir al inicio</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <nav className="bg-gradient-to-r from-purple-600 to-violet-600 text-white sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <span className="font-bold">Panel de Administración</span>
+              <Badge className="bg-white/20 text-white text-xs">Super Admin</Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-white/80 hidden sm:inline">{user.email}</span>
+              <ThemeToggle />
+              <Button onClick={logout} variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                <LogOut className="w-4 h-4 mr-1" /> Salir
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <ErrorBoundary>
+        <AdminDashboard />
+      </ErrorBoundary>
+    </div>
+  );
+}
+
+function DashboardLayout() {
+  const { user, subscription, logout } = useAuth();
   const [clientTab, setClientTab] = useState('shop');
   const [cartCount, setCartCount] = useState(0);
 
-  // Escuchar cambios en el carrito
   useEffect(() => {
     const handleCountChange = (e: any) => setCartCount(e.detail || 0);
     window.addEventListener('cart-count-changed', handleCountChange);
     return () => window.removeEventListener('cart-count-changed', handleCountChange);
   }, []);
 
-  // Detectar si estamos en la ruta /admin
-  const [isAdminRoute, setIsAdminRoute] = useState(false);
+  if (!user) return <Navigate to="/login" replace />;
 
-  useEffect(() => {
-    const checkRoute = () => {
-      setIsAdminRoute(window.location.pathname === '/admin' || window.location.hash === '#/admin');
-    };
-    checkRoute();
-    window.addEventListener('popstate', checkRoute);
-    return () => window.removeEventListener('popstate', checkRoute);
-  }, []);
-
-  // Verificar si el usuario está autorizado como admin
-  const isAuthorizedAdmin = user && ADMIN_EMAILS.includes(user.email.toLowerCase());
-
-  // Ruta /admin - Acceso especial para administradores
-  if (isAdminRoute) {
-    // Si no hay usuario, mostrar login con Google
-    if (!user) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-violet-900 to-indigo-900 p-4">
-          <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-              <ShieldAlert className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Panel de Administración
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">
-              Acceso restringido. Inicia sesión con tu cuenta autorizada.
-            </p>
-            <Button
-              onClick={loginWithGoogle}
-              disabled={isLoading}
-              className="w-full h-12 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-xl font-medium flex items-center justify-center gap-3"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              {isLoading ? 'Verificando...' : 'Continuar con Google'}
-            </Button>
-            <button
-              onClick={() => { window.location.href = '/'; }}
-              className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              ← Volver al inicio
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Usuario logueado pero no autorizado
-    if (!isAuthorizedAdmin) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 via-red-800 to-rose-900 p-4">
-          <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <ShieldAlert className="w-8 h-8 text-red-500" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Acceso Denegado
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mb-2 text-sm">
-              El email <span className="font-medium text-gray-700 dark:text-gray-300">{user.email}</span> no tiene permisos de administrador.
-            </p>
-            <p className="text-gray-400 dark:text-gray-500 mb-6 text-xs">
-              Contacta al propietario del sistema para solicitar acceso.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={logout}
-                variant="outline"
-                className="flex-1"
-              >
-                Cerrar sesión
-              </Button>
-              <Button
-                onClick={() => { window.location.href = '/'; }}
-                className="flex-1"
-              >
-                Ir al inicio
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Usuario autorizado - mostrar panel admin
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <nav className="bg-gradient-to-r from-purple-600 to-violet-600 text-white sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-14">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <span className="font-bold">Panel de Administración</span>
-                <Badge className="bg-white/20 text-white text-xs">Super Admin</Badge>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white/80 hidden sm:inline">{user.email}</span>
-                <ThemeToggle />
-                <Button onClick={logout} variant="ghost" size="sm" className="text-white hover:bg-white/20">
-                  <LogOut className="w-4 h-4 mr-1" /> Salir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </nav>
-        <ErrorBoundary>
-          <AdminDashboard />
-        </ErrorBoundary>
-      </div>
-    );
-  }
-
-  // Vistas públicas (sin sesión)
-  if (!user) {
-    if (view === 'terms') {
-      return <Terms onBack={() => setView('home')} />;
-    }
-
-    if (view === 'register') {
-      return (
-        <Register
-          onBack={() => setView('home')}
-          onSuccess={() => setView('login')}
-        />
-      );
-    }
-
-    if (view === 'login') {
-      return (
-        <Login
-          onLogin={() => { }}
-          onRegister={() => setView('register')}
-          onBack={() => setView('home')}
-          onTerms={() => setView('terms')}
-        />
-      );
-    }
-
-    return <Home onLogin={() => setView('login')} onRegister={() => setView('register')} onTerms={() => setView('terms')} />;
-  }
-
-  // Calcular días de trial restantes
   const trialDaysRemaining = subscription?.trialEndDate
-    ? Math.max(0, Math.ceil((subscription.trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(subscription.trialEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
   const isOnTrial = subscription?.status === 'trial';
   const isLimitReached = subscription?.status === 'limite_alcanzado';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Trial/Limit Banner */}
+      {/* Trial Banner */}
       {user.role === 'tienda' && (isOnTrial || isLimitReached) && (
-        <div className={`px-4 py-2 text-center text-sm font-medium ${isLimitReached
-          ? 'bg-red-500 text-white'
-          : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-          }`}>
-          {isLimitReached ? (
-            <span className="flex items-center justify-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Has alcanzado el límite de ventas de tu plan.
-              <Button size="sm" variant="secondary" className="ml-2 h-6">Actualizar plan</Button>
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <Clock className="h-4 w-4" />
-              Prueba gratuita: {trialDaysRemaining} días restantes
-              <Crown className="h-4 w-4 ml-2" />
-              Plan Profesional activo
-            </span>
-          )}
+        <div className={`px-4 py-2 text-center text-sm font-medium ${isLimitReached ? 'bg-red-500 text-white' : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'}`}>
+          {isLimitReached ? 'Límite alcanzado' : `Prueba gratuita: ${trialDaysRemaining} días restantes`}
         </div>
       )}
 
-      {/* Navigation Bar */}
+      {/* Navbar */}
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 gap-2">
-            {/* Logo Yupay */}
             <div className="flex items-center gap-2.5 shrink-0 group cursor-pointer" onClick={() => window.location.href = '/'}>
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/20 group-hover:scale-110 transition-transform duration-500 ring-2 ring-white/10">
-                <span className="text-white font-black text-sm font-outfit">Y</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tighter text-gray-900 dark:text-white font-outfit leading-none mb-0.5">YUPAY</span>
-                <Badge className="h-3.5 text-[8px] px-1 uppercase font-black bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 border-0 w-fit">
-                  {user.role}
-                </Badge>
-              </div>
+              {/* Logo simplified */}
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold">Y</div>
+              <span className="font-black text-xl text-gray-900 dark:text-white">YUPAY</span>
             </div>
 
-            {/* Navegación Cliente - Centro */}
+            {/* Client Nav */}
             {user.role === 'cliente' && (
-              <div className="flex items-center gap-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md p-1 rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+              <div className="hidden sm:flex items-center gap-1 bg-white/50 dark:bg-gray-800/50 rounded-full border border-gray-200 p-1">
                 {[
                   { key: 'shop', icon: Store, label: 'Tienda' },
                   { key: 'orders', icon: Package, label: 'Pedidos' },
                   { key: 'favorites', icon: Heart, label: 'Favoritos' },
                   { key: 'profile', icon: User, label: 'Perfil' }
                 ].map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setClientTab(tab.key)}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${clientTab === tab.key
-                      ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25 scale-105'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }`}
-                  >
-                    <tab.icon className={`h-4 w-4 ${clientTab === tab.key ? 'fill-white/20 animate-in zoom-in-50 duration-500' : ''}`} strokeWidth={2.5} />
-                    <span className="hidden lg:inline tracking-wide">{tab.label}</span>
+                  <button key={tab.key} onClick={() => setClientTab(tab.key)} className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 ${clientTab === tab.key ? 'bg-violet-600 text-white' : 'text-gray-500'}`}>
+                    <tab.icon className="h-3.5 w-3.5" />
+                    {tab.label}
                   </button>
                 ))}
               </div>
             )}
 
-            {/* Derecha: Usuario y acciones */}
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-2">
               {user.role === 'cliente' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-9 w-9 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-                  onClick={() => {
-                    // Trigger cart opening event or use a global state
-                    window.dispatchEvent(new CustomEvent('toggle-cart'));
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="relative" onClick={() => window.dispatchEvent(new CustomEvent('toggle-cart'))}>
                   <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-violet-600 text-white border-0 text-[10px] animate-in zoom-in duration-300">
-                      {cartCount}
-                    </Badge>
-                  )}
+                  {cartCount > 0 && <Badge className="absolute -top-1 -right-1 bg-red-500">{cartCount}</Badge>}
                 </Button>
               )}
               <ThemeToggle />
-              <div className="hidden md:flex items-center gap-2">
-                {user.avatar && (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 ring-2 ring-gray-100 dark:ring-gray-600"
-                  />
-                )}
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-gray-900 dark:text-white leading-tight">{user.name}</p>
-                  <p className="text-[9px] text-gray-500 dark:text-gray-400 leading-tight">{user.email}</p>
-                </div>
-              </div>
-              <Button
-                onClick={logout}
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 h-8 px-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline text-xs">Salir</span>
+              <Button onClick={logout} variant="ghost" size="sm">
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Dashboard Content based on Role */}
-      <main className="transition-colors duration-300 pb-20 sm:pb-0">
+      <main className="pb-20 sm:pb-0">
         <ErrorBoundary>
           {user.role === 'admin' && <AdminDashboard />}
           {user.role === 'cliente' && <ClientDashboard activeTab={clientTab} />}
@@ -312,61 +225,18 @@ function DashboardRouter() {
         </ErrorBoundary>
       </main>
 
-      {/* Mobile Bottom Navigation (Client only for now) */}
+      {/* Mobile Nav */}
       {user.role === 'cliente' && (
-        <div className="sm:hidden fixed bottom-6 left-4 right-4 z-50">
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-100 dark:border-white/10 shadow-2xl rounded-2xl p-1.5 flex items-center justify-around">
+        <div className="sm:hidden fixed bottom-4 left-4 right-4 z-50">
+          <div className="bg-white/90 backdrop-blur-lg border shadow-xl rounded-2xl p-2 flex justify-around">
             {[
-              { key: 'shop', icon: Store, label: 'Tienda' },
-              { key: 'orders', icon: Package, label: 'Pedidos' }
+              { key: 'shop', icon: Store },
+              { key: 'orders', icon: Package },
+              { key: 'favorites', icon: Heart },
+              { key: 'profile', icon: User }
             ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setClientTab(tab.key)}
-                className={`flex flex-col items-center gap-1.5 py-1 px-3 transition-all duration-300 ${clientTab === tab.key
-                  ? 'text-violet-600 dark:text-violet-400 scale-110'
-                  : 'text-gray-400 dark:text-gray-500 active:scale-90'
-                  }`}
-              >
-                <div className={`p-2 rounded-xl transition-colors ${clientTab === tab.key ? 'bg-violet-600/10' : ''}`}>
-                  <tab.icon className="h-5 w-5" strokeWidth={clientTab === tab.key ? 2.5 : 2} />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-tighter">{tab.label}</span>
-              </button>
-            ))}
-
-            {/* Floating Cart Button for Mobile */}
-            <div className="relative -mt-12 group">
-              <div className="absolute inset-0 bg-violet-600 blur-xl opacity-20 group-active:opacity-40 transition-opacity"></div>
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('toggle-cart'))}
-                className="relative bg-violet-600 text-white p-4 rounded-full shadow-2xl shadow-violet-500/40 active:scale-90 transition-all border-[6px] border-gray-50 dark:border-gray-950"
-              >
-                <ShoppingCart className="h-6 w-6" strokeWidth={2.5} />
-                {cartCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white border-2 border-white dark:border-gray-900 text-[10px] font-bold rounded-full animate-bounce shadow-lg">
-                    {cartCount}
-                  </Badge>
-                )}
-              </button>
-            </div>
-
-            {[
-              { key: 'favorites', icon: Heart, label: 'Favoritos' },
-              { key: 'profile', icon: User, label: 'Perfil' }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setClientTab(tab.key)}
-                className={`flex flex-col items-center gap-1.5 py-1 px-3 transition-all duration-300 ${clientTab === tab.key
-                  ? 'text-violet-600 dark:text-violet-400 scale-110'
-                  : 'text-gray-400 dark:text-gray-500 active:scale-90'
-                  }`}
-              >
-                <div className={`p-2 rounded-xl transition-colors ${clientTab === tab.key ? 'bg-violet-600/10' : ''}`}>
-                  <tab.icon className="h-5 w-5" strokeWidth={clientTab === tab.key ? 2.5 : 2} />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-tighter">{tab.label}</span>
+              <button key={tab.key} onClick={() => setClientTab(tab.key)} className={`p-2 rounded-xl ${clientTab === tab.key ? 'text-violet-600 bg-violet-50' : 'text-gray-400'}`}>
+                <tab.icon className="h-6 w-6" strokeWidth={clientTab === tab.key ? 2.5 : 2} />
               </button>
             ))}
           </div>
@@ -376,15 +246,36 @@ function DashboardRouter() {
   );
 }
 
-function App() {
+function AppRoutes() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <div className="h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div>;
+
+  return (
+    <Routes>
+      <Route path="/" element={<HomeWrapper />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginWrapper />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterWrapper />} />
+      <Route path="/terms" element={<TermsWrapper />} />
+      <Route path="/store/:slug" element={<PublicStore />} />
+
+      <Route path="/admin" element={<AdminRoute />} />
+
+      <Route path="/dashboard/*" element={user ? <DashboardLayout /> : <Navigate to="/login" />} />
+
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <DashboardRouter />
+        <AppRoutes />
         <Toaster position="top-right" richColors closeButton />
       </AuthProvider>
     </ErrorBoundary>
   );
 }
-
-export default App;
