@@ -110,11 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
 
         if (event === 'SIGNED_IN' && newSession?.user) {
+          setIsLoading(true);
           await loadUserProfile(newSession.user.id);
-        } else if (event === 'SIGNED_OUT') {
+          setIsLoading(false);
+        } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
           setUser(null);
           setStore(null);
           setSubscription(null);
+          if (event === 'SIGNED_OUT') setIsLoading(false);
         }
       }
     );
@@ -136,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
+        setUser(null);
         return;
       }
 
@@ -462,7 +466,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // Limpiar estado local
       setUser(null);
       setStore(null);
       setSubscription(null);
@@ -470,7 +477,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      setIsLoading(false);
+      // Forzar redirección al home después de un pequeño delay para asegurar limpieza
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
     }
   }, []);
 

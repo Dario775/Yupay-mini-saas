@@ -43,9 +43,10 @@ function RegisterWrapper() {
 
 function HomeWrapper() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   return (
     <Home
-      onLogin={() => navigate('/login')}
+      onLogin={() => user ? navigate('/dashboard') : navigate('/login')}
       onRegister={() => navigate('/register')}
       onTerms={() => navigate('/terms')}
     />
