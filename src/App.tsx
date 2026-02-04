@@ -43,7 +43,15 @@ function RegisterWrapper() {
 
 function HomeWrapper() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  // Redirigir automáticamente si ya está logueado
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+
   return (
     <Home
       onLogin={() => user ? navigate('/dashboard') : navigate('/login')}

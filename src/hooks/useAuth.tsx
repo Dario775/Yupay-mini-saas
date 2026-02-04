@@ -440,9 +440,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // En producción usa el dominio personalizado, en desarrollo usa localhost
-      const redirectUrl = import.meta.env.PROD
+      const baseUrl = import.meta.env.PROD
         ? 'https://www.yupay.com.ar'
         : window.location.origin;
+
+      const redirectUrl = `${baseUrl}/dashboard`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
