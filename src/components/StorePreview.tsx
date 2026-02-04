@@ -32,7 +32,7 @@ import { formatPrice } from '@/utils/format';
 interface StorePreviewProps {
     isOpen: boolean;
     onClose: () => void;
-    store: Store | undefined;
+    store: Store | null;
     products: Product[];
     shippingMethods: ShippingMethod[];
     paymentMethods: PaymentMethod[];

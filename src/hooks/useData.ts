@@ -326,7 +326,7 @@ export function useStoreData(storeId: string) {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [store, setStore] = useState<Store | undefined>(undefined);
+  const [store, setStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
 
   // Sync with Supabase if configured
