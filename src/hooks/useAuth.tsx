@@ -134,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Cargar perfil, tienda y suscripción del usuario
   const loadUserProfile = async (userId: string) => {
+    console.log('🔍 Loading profile for userId:', userId);
     try {
       // 1. Cargar perfil básico
       const { data: profile, error: profileError } = await supabase
@@ -143,8 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError) {
-        console.error('Error loading profile:', profileError);
-        // Fallback: Si no hay perfil, usar datos de la sesión
+        console.warn('⚠️ No profile found in DB, creating fallback user');
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
@@ -157,23 +157,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isActive: true
         };
         setUser(fallbackUser);
+        console.log('✅ Fallback user set:', fallbackUser.role);
         return;
       }
+
+      console.log('✅ Profile loaded:', profile.email, 'Role from DB:', profile.role);
 
       // 2. Determinar el rol inicial
       const isGlobalAdmin = isAdminEmail(profile.email);
       let effectiveRole = isGlobalAdmin ? 'admin' : (profile.role as UserRole);
 
-      // 3. SIEMPRE intentar cargar tienda para ver si es dueño (Seguridad extra)
-      const { data: storeData } = await supabase
+      // 3. SIEMPRE intentar cargar tienda del dueño
+      const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
         .eq('owner_id', userId)
-        .single();
+        .maybeSingle();
 
-      // Si tiene tienda pero el perfil decía 'cliente', elevar a 'tienda'
-      if (storeData && effectiveRole === 'cliente') {
+      if (storeData) {
+        console.log('🏠 Store found for user:', storeData.name);
+        // Si tiene tienda, forzar rol de tienda aunque el perfil diga cliente
         effectiveRole = 'tienda';
+      } else {
+        console.log('ℹ️ No core store found for this user ID');
       }
 
       const loadedUser: User = {
@@ -186,9 +192,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date(profile.created_at),
         isActive: profile.is_active,
       };
+
+      console.log('🚀 Setting final user role:', loadedUser.role);
       setUser(loadedUser);
 
-      // 4. Si es dueño de tienda o tiene tienda, cargar datos
+      // 4. Si tiene tienda, cargar datos completos
       if (storeData) {
         setStore({
           id: storeData.id,
@@ -218,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('subscriptions')
           .select('*')
           .eq('store_id', storeData.id)
-          .single();
+          .maybeSingle();
 
         if (subData) {
           setSubscription({
@@ -238,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      console.error('❌ Critical error in loadUserProfile:', error);
     }
   };
 
