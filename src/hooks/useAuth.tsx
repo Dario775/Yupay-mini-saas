@@ -78,63 +78,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Cargar sesión existente al iniciar
   useEffect(() => {
-    const initAuth = async () => {
-      // Si está en modo demo, no intentar cargar sesión de Supabase
-      if (isDemoMode) {
-        console.log('🎮 Modo DEMO activado - Supabase no configurado');
-        setIsLoading(false);
-        return;
-      }
+    if (isDemoMode) {
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        // Obtener sesión actual
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
+    let isMounted = true;
 
-        if (currentSession?.user) {
-          await loadUserProfile(currentSession.user.id);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Escuchar cambios de autenticación
+    // Listener de cambios de autenticación con manejo de errores robusto
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth event:', event);
+        if (!isMounted) return;
+
+        console.log('🔔 Auth Event:', event, newSession?.user?.email);
         setSession(newSession);
 
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          setIsLoading(true);
-          await loadUserProfile(newSession.user.id);
-          setIsLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setStore(null);
-          setSubscription(null);
-          setIsLoading(false);
-        } else if (event === 'USER_UPDATED') {
-          if (newSession?.user) {
-            await loadUserProfile(newSession.user.id);
+        try {
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            if (newSession?.user) {
+              setIsLoading(true);
+              await loadUserProfile(newSession.user.id);
+            }
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setStore(null);
+            setSubscription(null);
+          }
+        } catch (err) {
+          console.error('❌ Error in auth state change:', err);
+        } finally {
+          // Garantizar que isLoading siempre termine en false
+          if (isMounted) {
+            setTimeout(() => {
+              if (isMounted) setIsLoading(false);
+            }, 500); // Pequeño buffer para evitar flickering
           }
         }
       }
     );
 
+    // Fail-safe: Si pasan 5 segundos y sigue cargando, forzar el apagado
+    const timer = setTimeout(() => {
+      if (isMounted && isLoading) {
+        console.warn('⚠️ Auth timeout reached, forcing isLoading to false');
+        setIsLoading(false);
+      }
+    }, 5000);
+
     return () => {
+      isMounted = false;
+      clearTimeout(timer);
       authSubscription.unsubscribe();
     };
-  }, []);
+  }, [isDemoMode]);
 
   // Cargar perfil, tienda y suscripción del usuario
   const loadUserProfile = async (userId: string) => {
     try {
-      // Cargar perfil
+      // 1. Cargar perfil básico
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -143,12 +144,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
-        setUser(null);
+        // Fallback: Si no hay perfil, usar datos de la sesión
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const fallbackUser: User = {
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+          role: isAdminEmail(session.user.email!) ? 'admin' : 'cliente',
+          createdAt: new Date(),
+          isActive: true
+        };
+        setUser(fallbackUser);
         return;
       }
 
-      // Determinar el rol: si el email está en la lista de admins, es admin
-      const effectiveRole = isAdminEmail(profile.email) ? 'admin' : (profile.role as UserRole);
+      // 2. Determinar el rol inicial
+      const isGlobalAdmin = isAdminEmail(profile.email);
+      let effectiveRole = isGlobalAdmin ? 'admin' : (profile.role as UserRole);
+
+      // 3. SIEMPRE intentar cargar tienda para ver si es dueño (Seguridad extra)
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('owner_id', userId)
+        .single();
+
+      // Si tiene tienda pero el perfil decía 'cliente', elevar a 'tienda'
+      if (storeData && effectiveRole === 'cliente') {
+        effectiveRole = 'tienda';
+      }
 
       const loadedUser: User = {
         id: profile.id,
@@ -162,62 +188,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(loadedUser);
 
-      // Si es dueño de tienda, cargar tienda y suscripción
-      if (loadedUser.role === 'tienda') {
-        // Cargar tienda
-        const { data: storeData } = await supabase
-          .from('stores')
+      // 4. Si es dueño de tienda o tiene tienda, cargar datos
+      if (storeData) {
+        setStore({
+          id: storeData.id,
+          ownerId: storeData.owner_id,
+          name: storeData.name,
+          description: storeData.description,
+          category: storeData.category,
+          address: storeData.address,
+          phone: storeData.phone,
+          email: storeData.email,
+          logo: storeData.logo,
+          banner: storeData.banner,
+          isActive: storeData.is_active,
+          rating: parseFloat(storeData.rating) || 0,
+          createdAt: new Date(storeData.created_at),
+          location: storeData.latitude && storeData.longitude ? {
+            lat: parseFloat(storeData.latitude),
+            lng: parseFloat(storeData.longitude),
+            address: storeData.address || '',
+            locality: storeData.locality,
+            province: storeData.province,
+          } : undefined,
+        });
+
+        // Cargar suscripción
+        const { data: subData } = await supabase
+          .from('subscriptions')
           .select('*')
-          .eq('owner_id', userId)
+          .eq('store_id', storeData.id)
           .single();
 
-        if (storeData) {
-          setStore({
-            id: storeData.id,
-            ownerId: storeData.owner_id,
-            name: storeData.name,
-            description: storeData.description,
-            category: storeData.category,
-            address: storeData.address,
-            phone: storeData.phone,
-            email: storeData.email,
-            logo: storeData.logo,
-            banner: storeData.banner,
-            isActive: storeData.is_active,
-            rating: parseFloat(storeData.rating) || 0,
-            createdAt: new Date(storeData.created_at),
-            location: storeData.latitude && storeData.longitude ? {
-              lat: parseFloat(storeData.latitude),
-              lng: parseFloat(storeData.longitude),
-              address: storeData.address || '',
-              locality: storeData.locality,
-              province: storeData.province,
-            } : undefined,
+        if (subData) {
+          setSubscription({
+            id: subData.id,
+            userId: subData.user_id,
+            storeId: subData.store_id,
+            plan: subData.plan,
+            status: subData.status,
+            startDate: new Date(subData.start_date),
+            endDate: new Date(subData.end_date),
+            trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
+            price: parseFloat(subData.price) || 0,
+            autoRenew: subData.auto_renew,
+            salesThisMonth: subData.sales_this_month || 0,
+            lastResetDate: new Date(subData.last_reset_date),
           });
-
-          // Cargar suscripción
-          const { data: subData } = await supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('store_id', storeData.id)
-            .single();
-
-          if (subData) {
-            setSubscription({
-              id: subData.id,
-              userId: subData.user_id,
-              storeId: subData.store_id,
-              plan: subData.plan,
-              status: subData.status,
-              startDate: new Date(subData.start_date),
-              endDate: new Date(subData.end_date),
-              trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
-              price: parseFloat(subData.price) || 0,
-              autoRenew: subData.auto_renew,
-              salesThisMonth: subData.sales_this_month || 0,
-              lastResetDate: new Date(subData.last_reset_date),
-            });
-          }
         }
       }
     } catch (error) {
@@ -472,21 +489,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
 
-      // Limpiar estado local
+      // Limpiar estado local inmediatamente
       setUser(null);
       setStore(null);
       setSubscription(null);
       setSession(null);
+
+      // Forzar una redirección limpia
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      // Forzar redirección al home después de un pequeño delay para asegurar limpieza
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
+      setIsLoading(false);
     }
   }, []);
 
