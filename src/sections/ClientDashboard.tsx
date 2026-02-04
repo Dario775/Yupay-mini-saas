@@ -2,40 +2,29 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   ShoppingBag,
   Package,
-  Clock,
   MapPin,
   Search,
   Star,
   Heart,
   ShoppingCart,
-  CheckCircle,
-  Truck,
   CreditCard,
   ChevronRight,
   Minus,
   Plus,
   X,
   User,
-  Settings,
   Bell,
   Eye,
   Store,
-  RefreshCw,
-  XCircle,
-  Filter,
   Wallet,
   Banknote,
-  Zap,
   Shield,
   Gift,
   Headphones,
   Sparkles,
   TrendingUp,
   ArrowRight,
-  Navigation,
-  Loader2,
   MessageCircle,
-  Timer,
   ShieldCheck,
   Headset,
   History
@@ -58,6 +47,12 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useClientData } from '@/hooks/useData';
+import { ShopView } from './ClientDashboard/ShopView';
+import { CartDrawer } from './ClientDashboard/CartDrawer';
+import { OrdersView } from './ClientDashboard/OrdersView';
+import { FavoritesView } from './ClientDashboard/FavoritesView';
+import { ProfileView } from './ClientDashboard/ProfileView';
+
 import { useAuth } from '@/hooks/useAuth';
 import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
 import { toast } from 'sonner';
@@ -65,155 +60,9 @@ import { searchAddresses, getCurrentPosition, reverseGeocode, formatDistance, ca
 import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/format';
 
-function OrderStatusBadge({ status }: { status: Order['status'] }) {
-  const styles = {
-    pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    procesando: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    enviado: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    entregado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    cancelado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  };
-  const icons = { pendiente: Clock, procesando: RefreshCw, enviado: Truck, entregado: CheckCircle, cancelado: XCircle };
-  const Icon = icons[status];
-  return (
-    <Badge className={`${styles[status]} flex items-center gap-1`}>
-      <Icon className="h-3 w-3" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
-  );
-}
 
-const getTimeRemaining = (endDate: Date) => {
-  const now = new Date();
-  const diff = new Date(endDate).getTime() - now.getTime();
-  if (diff <= 0) return 'Expirada';
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-  return `${minutes}m ${seconds}s`;
-};
 
-function ProductTimer({ endDate }: { endDate: Date }) {
-  const [time, setTime] = useState(getTimeRemaining(endDate));
-  useEffect(() => {
-    const interval = setInterval(() => setTime(getTimeRemaining(endDate)), 1000);
-    return () => clearInterval(interval);
-  }, [endDate]);
 
-  return (
-    <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-lg bg-yellow-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-lg animate-pulse">
-      <Timer className="h-3 w-3" />
-      {time}
-    </div>
-  );
-}
-
-function ProductCard({
-  product,
-  onAddToCart,
-  isFavorite,
-  onToggleFavorite,
-  onView,
-  distance,
-  flashOffer
-}: {
-  product: Product;
-  onAddToCart: (product: Product) => void;
-  isFavorite: boolean;
-  onToggleFavorite: (id: string) => void;
-  onView: (product: Product) => void;
-  distance?: number;
-  flashOffer?: FlashOffer;
-}) {
-  const hasFlash = !!flashOffer;
-  const discountedPrice = hasFlash
-    ? flashOffer.discountType === 'percentage'
-      ? product.price * (1 - flashOffer.discountValue / 100)
-      : product.price - flashOffer.discountValue
-    : product.isOnSale && product.discount
-      ? product.price * (1 - product.discount / 100)
-      : null;
-
-  return (
-    <Card className={`group relative overflow-hidden bg-white dark:bg-gray-900 border ${hasFlash ? 'border-yellow-400 shadow-yellow-100 dark:shadow-yellow-900/10' : 'border-gray-100 dark:border-gray-800'} shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl`}>
-      {/* Favorite Button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
-        className="absolute top-2 right-2 z-10 p-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm transition-all hover:scale-110 shadow-sm"
-      >
-        <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-      </button>
-
-      {/* Flash Timer */}
-      {hasFlash && <ProductTimer endDate={flashOffer.endDate} />}
-
-      {/* Image Area */}
-      <div
-        className="relative aspect-[4/3] bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer"
-        onClick={() => onView(product)}
-      >
-        {product.images?.[0] ? (
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-200 dark:text-gray-700">
-            {product.name.charAt(0)}
-          </div>
-        )}
-
-        {/* Badges Overlay */}
-        <div className="absolute bottom-2 left-2 flex flex-col gap-1">
-          {distance !== undefined && (
-            <div className="px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-[9px] font-bold text-white flex items-center gap-1">
-              <MapPin className="h-2.5 w-2.5" />
-              {formatDistance(distance)}
-            </div>
-          )}
-          {hasFlash && (
-            <Badge className="bg-yellow-500 text-white text-[9px] border-none shadow-sm">
-              <Zap className="h-2.5 w-2.5 mr-1" />
-              OFERTA FLASH
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <CardContent className="p-3 space-y-2">
-        <div>
-          <h3 className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 leading-tight">{product.name}</h3>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400">{product.category}</p>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-col">
-            {discountedPrice ? (
-              <>
-                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">{formatPrice(discountedPrice)}</p>
-                <p className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</p>
-              </>
-            ) : (
-              <p className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(product.price)}</p>
-            )}
-          </div>
-          <Button
-            size="sm"
-            className={`h-7 px-3 ${hasFlash ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-violet-600 hover:bg-violet-700'} text-white text-[10px] font-bold rounded-full gap-1`}
-            onClick={(e) => { e.stopPropagation(); onAddToCart({ ...product, price: discountedPrice || product.price } as Product); }}
-            disabled={product.stock === 0}
-          >
-            {hasFlash ? <Zap className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-            Añadir
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 interface ClientDashboardProps {
   activeTab?: string;
@@ -419,436 +268,62 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
 
           {/* Shop Tab */}
           <TabsContent value="shop">
-            {/* Hero Banner - More Minimalist */}
-            <div className="relative overflow-hidden rounded-3xl bg-violet-600 p-6 sm:p-8 mb-6">
-              <div className="relative z-10">
-                <Badge className="bg-white/20 text-white border-0 mb-3 px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider">
-                  Ofertas
-                </Badge>
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Hasta 50% OFF</h2>
-                <p className="text-white/80 text-sm mb-4 max-w-xs">En productos seleccionados. ¡No te lo pierdas!</p>
-                <Button size="sm" className="bg-white text-violet-600 hover:bg-gray-100 rounded-full font-bold">
-                  Ver Todo
-                </Button>
-              </div>
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-              <div className="absolute -top-8 -left-8 w-40 h-40 bg-violet-400/20 rounded-full blur-3xl"></div>
-            </div>
+            <ShopView
+              products={products}
+              flashOffers={flashOffers}
+              stores={stores}
+              filteredProducts={filteredProducts}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              favorites={favorites}
+              addToCart={addToCart}
+              handleToggleFavorite={handleToggleFavorite}
+              setSelectedProduct={setSelectedProduct}
+              userLocation={userLocation}
+            />
 
-            {/* Section Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">Descubre Productos</h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">Explora los mejores productos de nuestras tiendas</p>
-              </div>
-              <Button variant="outline" className="rounded-full gap-2">
-                <Filter className="h-4 w-4" /> Filtros
-              </Button>
-            </div>
-
-            {/* Active Flash Offers Section - Compact Horizontal Scroll */}
-            {flashOffers?.filter(o => o.status === 'active').length > 0 && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-yellow-500 fill-current animate-pulse" />
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ofertas Flash</h2>
-                  </div>
-                  <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">
-                    Tiempo Limitado
-                  </span>
-                </div>
-
-                <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide snap-x">
-                  {products
-                    .filter(p => flashOffers.some(o => o.status === 'active' && o.productIds.includes(p.id)))
-                    .map(product => {
-                      const offer = flashOffers.find(o => o.status === 'active' && o.productIds.includes(product.id));
-
-                      return (
-                        <div key={`flash-${product.id}`} className="min-w-[240px] w-[240px] snap-center bg-white dark:bg-gray-900 border border-yellow-200 dark:border-yellow-900/30 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all active:scale-[0.98]">
-                          {/* Image with Gradient & Overlay */}
-                          <div className="h-32 relative bg-gray-50 dark:bg-gray-800">
-                            {product.images?.[0] ?
-                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-                              :
-                              <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold">{product.name[0]}</div>
-                            }
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
-
-                            {/* Timer Badge Overlay */}
-                            <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
-                              <Clock className="w-3 h-3 text-yellow-400" />
-                              <span className="text-[10px] font-mono font-bold text-white tracking-wide">02:45:12</span>
-                            </div>
-
-                            {/* Discount Badge */}
-                            <div className="absolute top-2 right-2 bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
-                              -{offer?.discountValue || 20}%
-                            </div>
-
-                            {/* Price Overlay */}
-                            <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                              <div className="flex flex-col">
-                                <span className="text-[10px] text-gray-300 line-through font-medium leading-none mb-0.5">{formatPrice(product.price)}</span>
-                                <span className="text-xl font-black text-yellow-400 leading-none drop-shadow-md">
-                                  {formatPrice(product.price * (1 - (offer?.discountValue || 0) / 100))}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Content */}
-                          <div className="p-3">
-                            <h3 className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 mb-1" title={product.name}>{product.name}</h3>
-                            <div className="flex items-center justify-between mt-2">
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                <Zap className="h-3 w-3 text-yellow-500" />
-                                <span>Quedan {product.stock}</span>
-                              </p>
-                              <Button
-                                size="sm"
-                                className="h-7 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full"
-                                onClick={() => addToCart(product)}
-                              >
-                                Lo quiero
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Categories - Minimalist Pill Design */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${selectedCategory === cat
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-100 dark:border-gray-800'
-                    }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={addToCart}
-                  isFavorite={isFavorite(product.id)}
-                  onToggleFavorite={handleToggleFavorite}
-                  onView={setSelectedProduct}
-                  distance={product.distance}
-                  flashOffer={product.flashOffer}
-                />
-              ))}
-            </div>
-
-            {filteredProducts.length === 0 && (
-              <div className="text-center py-16">
-                <Package className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">No se encontraron productos</h3>
-                <p className="text-gray-500 dark:text-gray-400">Intenta con otra búsqueda o categoría</p>
-              </div>
-            )}
-
-            {/* Benefits Section - Premium Refactor */}
-            {/* Benefits Section - Discrete/Minimalist */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 mt-8 mb-12 py-6 border-t border-dashed border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <ShieldCheck className="h-4 w-4" />
-                <span className="text-xs font-medium">Compra Protegida</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <History className="h-4 w-4" />
-                <span className="text-xs font-medium">Devoluciones Gratuitas</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                <Headset className="h-4 w-4" />
-                <span className="text-xs font-medium">Soporte 24/7</span>
-              </div>
-            </div>
           </TabsContent>
 
           {/* Orders Tab */}
           <TabsContent value="orders">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2 dark:text-white">Mis Pedidos</h2>
-              <p className="text-gray-600 dark:text-gray-400">Seguimiento de tus compras</p>
-            </div>
-
-            {orders.length === 0 ? (
-              <div className="text-center py-16">
-                <Package className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">No tienes pedidos</h3>
-                <p className="text-gray-500 dark:text-gray-400">Cuando realices una compra, aparecerá aquí</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {orders.map((order) => (
-                  <Card key={order.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl transition-all active:scale-[0.98]">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="text-[10px] font-mono text-gray-400">#{order.id}</p>
-                          <p className="text-xs font-bold text-gray-900 dark:text-white">{order.createdAt.toLocaleDateString()}</p>
-                        </div>
-                        <OrderStatusBadge status={order.status} />
-                      </div>
-
-                      <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-hide mb-3">
-                        {order.items.map((item, idx) => (
-                          <span key={idx} className="flex-shrink-0 text-[10px] bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-500 border dark:border-gray-700">
-                            {item.productName}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t dark:border-gray-800">
-                        <p className="text-sm font-bold text-violet-600">{formatPrice(order.total)}</p>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-gray-500" onClick={() => setSelectedOrder(order)}>Detalles</Button>
-                          {order.status === 'pendiente' && (
-                            <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-red-500" onClick={() => setShowCancelConfirm(order.id)}>Cancelar</Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <OrdersView orders={orders} onCancelOrder={handleCancelOrder} />
           </TabsContent>
 
           {/* Favorites Tab */}
           <TabsContent value="favorites">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2 dark:text-white">Mis Favoritos</h2>
-              <p className="text-gray-600 dark:text-gray-400">Productos que te gustan</p>
-            </div>
-
-            {favoriteProducts.length === 0 ? (
-              <div className="text-center py-16">
-                <Heart className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">No tienes favoritos</h3>
-                <p className="text-gray-500 dark:text-gray-400">Guarda productos que te gusten para verlos aquí</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {favoriteProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={addToCart}
-                    isFavorite={true}
-                    onToggleFavorite={handleToggleFavorite}
-                    onView={setSelectedProduct}
-                  />
-                ))}
-              </div>
-            )}
+            <FavoritesView
+              favoriteProducts={favoriteProducts}
+              addToCart={addToCart}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
+              setSelectedProduct={setSelectedProduct}
+            />
           </TabsContent>
 
-          {/* Profile Tab - Minimalist Refactor */}
+          {/* Profile Tab */}
           <TabsContent value="profile">
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="text-center sm:text-left">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">Mi Perfil</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Gestiona tu información y preferencias</p>
-              </div>
-
-              <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl">
-                <CardHeader className="p-4 sm:p-6 pb-0">
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="relative">
-                      <img src={user?.avatar} alt={user?.name} className="w-16 h-16 rounded-full border-2 border-violet-100 dark:border-violet-900" />
-                      <div className="absolute -bottom-1 -right-1 p-1 bg-violet-600 rounded-full border-2 border-white dark:border-gray-900">
-                        <Star className="h-2.5 w-2.5 text-white fill-white" />
-                      </div>
-                    </div>
-                    <div className="text-center sm:text-left">
-                      <h3 className="text-lg font-bold dark:text-white">{user?.name}</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nombre</Label>
-                      <Input defaultValue={user?.name} className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Teléfono</Label>
-                      <Input placeholder="+54 11 1234 5678" className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800" />
-                    </div>
-                  </div>
-                  <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold h-9 px-6 rounded-xl" onClick={() => toast.success('Perfil actualizado')}>
-                    Guardar Cambios
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Location Card - More Compact */}
-              <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl">
-                <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-white">
-                    <MapPin className="h-4 w-4 text-violet-500" /> Mi Ubicación
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  {userLocation && (
-                    <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-800/30 flex items-center gap-3">
-                      <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                        <MapPin className="h-4 w-4 text-violet-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold dark:text-white truncate">{userLocation.locality || 'Seleccionada'}</p>
-                        <p className="text-[10px] text-gray-500 truncate">{userLocation.address}</p>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => setUserLocation(null)} className="h-8 w-8 text-gray-400">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Buscar dirección..."
-                      value={addressSearch}
-                      onChange={(e) => handleAddressSearch(e.target.value)}
-                      className="pl-10 h-10 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 rounded-xl"
-                    />
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="w-full h-10 gap-2 border-gray-100 dark:border-gray-800 rounded-xl text-xs font-bold"
-                    onClick={handleGetCurrentLocation}
-                    disabled={isGettingLocation}
-                  >
-                    {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : <Navigation className="h-4 w-4 text-violet-600" />}
-                    Usar ubicación actual
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Preferences */}
-              <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl">
-                <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2 dark:text-white">
-                    <Settings className="h-4 w-4 text-violet-500" /> Preferencias
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold dark:text-white">Notificaciones por email</p>
-                      <p className="text-[10px] text-gray-500">Actualizaciones de pedidos</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold dark:text-white">Ofertas y promociones</p>
-                      <p className="text-[10px] text-gray-500">Descuentos exclusivos</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <ProfileView
+              user={user}
+              userLocation={userLocation}
+              onUpdateLocation={setUserLocation}
+            />
           </TabsContent>
         </main>
       </Tabs>
 
-      {/* Cart Dialog - Refined for Minimalism */}
-      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-w-md w-[95vw] rounded-3xl p-0 overflow-hidden dark:bg-gray-900 border-0 shadow-2xl">
-          <div className="p-6 bg-violet-600">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Tu Carrito
-            </h3>
-            <p className="text-violet-100 text-xs mt-1">{cartItemsCount} productos seleccionados</p>
-          </div>
-
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
-            <ScrollArea className="max-h-[50vh] pr-4">
-              {cart.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                  <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">Tu carrito está vacío</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {cart.map(({ product, quantity }) => (
-                    <div key={product.id} className="flex items-center gap-3">
-                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden flex-shrink-0">
-                        {product.images?.[0] ? <img src={product.images[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-gray-300">{product.name[0]}</div>}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">{product.name}</h4>
-                        <p className="text-[10px] text-violet-600 font-bold">${product.price}</p>
-                      </div>
-                      <div className="flex items-center bg-gray-50 dark:bg-gray-800 rounded-full px-2 py-1 gap-3">
-                        <button onClick={() => updateQuantity(product.id, -1)} className="p-1 hover:text-red-500 transition-colors"><Minus className="h-3 w-3" /></button>
-                        <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                        <button onClick={() => updateQuantity(product.id, 1)} className="p-1 hover:text-green-500 transition-colors"><Plus className="h-3 w-3" /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-
-            {cart.length > 0 && (
-              <div className="mt-6 space-y-4">
-                <div className="flex justify-between items-center text-sm font-bold border-t dark:border-gray-800 pt-4">
-                  <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total</span>
-                  <span className="text-xl text-violet-600">${cartTotal.toFixed(2)}</span>
-                </div>
-                <Button onClick={handleCheckout} className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl shadow-lg shadow-violet-500/20">
-                  Realizar Pedido
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full h-12 border-green-500 text-green-600 hover:bg-green-50 font-bold rounded-2xl gap-2"
-                  onClick={() => {
-                    const storeId = cart[0]?.product.storeId;
-                    const store = stores.find(s => s.id === storeId);
-                    if (store?.phone) {
-                      const orderMock: any = {
-                        items: cart.map(i => ({ quantity: i.quantity, productName: i.product.name, unitPrice: i.product.price })),
-                        total: cartTotal,
-                        shippingAddress: userLocation?.address || 'Mi dirección'
-                      };
-                      const msg = formatOrderMessage(orderMock, store.name);
-                      window.open(generateWhatsAppLink(store.phone, msg), '_blank');
-                    } else {
-                      toast.error('La tienda no tiene WhatsApp configurado');
-                    }
-                  }}
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  Pedir por WhatsApp
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Cart Drawer - Modular Component */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onOpenChange={setIsCartOpen}
+        cart={cart}
+        onUpdateQuantity={updateQuantity}
+        onCheckout={handleCheckout}
+        stores={stores}
+        userLocation={userLocation}
+        cartTotal={cartTotal}
+        cartItemsCount={cartItemsCount}
+      />
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
@@ -926,67 +401,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
         </DialogContent>
       </Dialog>
 
-      {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-md dark:bg-gray-900 border-0 rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold dark:text-white">Detalles del Pedido</DialogTitle>
-            <DialogDescription className="text-xs">Identificador: #{selectedOrder?.id}</DialogDescription>
-          </DialogHeader>
-          {selectedOrder && (
-            <div className="mt-4 space-y-6">
-              <div className="flex items-center justify-between">
-                <OrderStatusBadge status={selectedOrder.status} />
-                <p className="text-xs font-bold text-gray-500">{selectedOrder.createdAt.toLocaleDateString()}</p>
-              </div>
 
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Productos</p>
-                <div className="space-y-2">
-                  {selectedOrder.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 dark:text-gray-300">{item.quantity}x {item.productName}</span>
-                      <span className="font-bold dark:text-white">${item.total.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-4 border-t dark:border-gray-800 flex justify-between items-center font-bold">
-                <span className="text-gray-500 text-xs">TOTAL PAGADO</span>
-                <span className="text-xl text-violet-600">${selectedOrder.total.toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                <p className="text-[11px] text-gray-500 leading-relaxed">{selectedOrder.shippingAddress}</p>
-              </div>
-
-              {selectedOrder.status === 'pendiente' && (
-                <Button variant="destructive" className="w-full h-11 rounded-xl font-bold text-xs" onClick={() => { handleCancelOrder(selectedOrder.id); setSelectedOrder(null); }}>
-                  CANCELAR PEDIDO
-                </Button>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Confirm Dialog */}
-      <Dialog open={!!showCancelConfirm} onOpenChange={() => setShowCancelConfirm(null)}>
-        <DialogContent className="max-w-sm dark:bg-gray-900 border-0 rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-center font-bold dark:text-white">¿Cancelar pedido?</DialogTitle>
-            <DialogDescription className="text-center text-xs">
-              Esta acción no se puede deshacer y el pedido será marcado como cancelado.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-3 mt-4">
-            <Button variant="outline" className="flex-1 h-11 rounded-xl font-bold text-xs" onClick={() => setShowCancelConfirm(null)}>NO, MANTENER</Button>
-            <Button variant="destructive" className="flex-1 h-11 rounded-xl font-bold text-xs" onClick={() => showCancelConfirm && handleCancelOrder(showCancelConfirm)}>SÍ, CANCELAR</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

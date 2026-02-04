@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     store_id UUID REFERENCES stores(id) ON DELETE SET NULL,
-    plan VARCHAR(50) DEFAULT 'free' CHECK (plan IN ('free', 'basico', 'profesional', 'empresarial')),
+    plan VARCHAR(50) DEFAULT 'free',
     status VARCHAR(50) DEFAULT 'trial' CHECK (status IN ('activa', 'trial', 'pendiente', 'cancelada', 'vencida', 'limite_alcanzado')),
     price DECIMAL(10, 2) DEFAULT 0,
     start_date TIMESTAMPTZ DEFAULT NOW(),
@@ -113,6 +113,39 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     sales_this_month INTEGER DEFAULT 0,
     last_reset_date TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
+-- PLAN CONFIGURATIONS (Global limits)
+-- =============================================
+CREATE TABLE IF NOT EXISTS plan_configs (
+    id VARCHAR(50) PRIMARY KEY, -- 'free', 'basico', 'profesional', 'empresarial'
+    price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    max_sales_per_month INTEGER DEFAULT -1,
+    max_products INTEGER DEFAULT -1,
+    max_stores INTEGER DEFAULT 1,
+    has_flash_offers BOOLEAN DEFAULT FALSE,
+    max_flash_offers_per_month INTEGER DEFAULT 0,
+    max_flash_offer_radius INTEGER DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed initial plan configs
+INSERT INTO plan_configs (id, price, max_sales_per_month, max_products, max_stores, has_flash_offers, max_flash_offers_per_month, max_flash_offer_radius)
+VALUES 
+('free', 0, 5, 10, 1, false, 0, 0),
+('basico', 5000, 50, 100, 1, false, 0, 0),
+('profesional', 15000, 500, 1000, 3, true, 2, 5),
+('empresarial', 45000, -1, -1, 10, true, -1, 20)
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================
+-- GLOBAL SETTINGS
+-- =============================================
+CREATE TABLE IF NOT EXISTS global_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -186,9 +219,23 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plan_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE global_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shipping_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flash_offers ENABLE ROW LEVEL SECURITY;
+
+-- Plan Configs: Public read, Admin manage
+CREATE POLICY "Plan configs are viewable by everyone" ON plan_configs FOR SELECT USING (true);
+CREATE POLICY "Only admins can manage plan configs" ON plan_configs FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);
+
+-- Global Settings: Public read, Admin manage
+CREATE POLICY "Global settings are viewable by everyone" ON global_settings FOR SELECT USING (true);
+CREATE POLICY "Only admins can manage global settings" ON global_settings FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);
 
 -- Profiles: Users see their own profile.
 -- Note: Use a separate secure view or function if public data (name/avatar) needs to be exposed globally.

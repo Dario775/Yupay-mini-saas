@@ -171,14 +171,43 @@ export default function PricingSection() {
     const plans = (Object.keys(planLimits) as Array<keyof typeof planLimits>).map((key) => {
         const limits = planLimits[key];
         const visual = PLAN_FEATURES_MAP[key as string] || PLAN_FEATURES_MAP.basico;
-        const monthlyPrice = limits.price;
-        const yearlyPrice = limits.price * 12 * 0.8; // 20% de descuento como dice el switch
+        const monthlyPrice = Math.round(limits.price);
+        const yearlyPrice = Math.round(limits.price * 12 * 0.8);
+
+        // Actualizar features dinámicamente según los límites actuales
+        const dynamicFeatures = [
+            {
+                text: limits.maxProducts === -1 ? "Productos ilimitados" : `Hasta ${limits.maxProducts} productos`,
+                icon: <Briefcase size={20} />
+            },
+            {
+                text: limits.maxSalesPerMonth === -1 ? "Ventas ilimitadas" : `${limits.maxSalesPerMonth} ventas por mes`,
+                icon: <Database size={20} />
+            },
+            {
+                text: limits.maxStores === 1 ? "Tienda única" : `Hasta ${limits.maxStores} tiendas`,
+                icon: <Server size={20} />
+            },
+        ];
+
+        // Actualizar sub-features (includes) según capacidades
+        const dynamicIncludes = [...visual.includes];
+        if (limits.hasFlashOffers) {
+            const index = dynamicIncludes.findIndex(item => item.toLowerCase().includes('ia') || item.toLowerCase().includes('app'));
+            if (index !== -1) {
+                dynamicIncludes.splice(index + 1, 0, `Ofertas Relámpago (${limits.maxFlashOfferRadius}km)`);
+            } else {
+                dynamicIncludes.push(`Ofertas Relámpago (${limits.maxFlashOfferRadius}km)`);
+            }
+        }
 
         return {
             ...visual,
             key,
             price: monthlyPrice,
             yearlyPrice: yearlyPrice,
+            features: dynamicFeatures,
+            includes: dynamicIncludes
         };
     });
 
@@ -270,6 +299,8 @@ export default function PricingSection() {
                                         <NumberFlow
                                             value={isYearly ? plan.yearlyPrice : plan.price}
                                             className="text-4xl font-bold"
+                                            locales="es-AR"
+                                            format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
                                         />
                                     </span>
                                     <span className="text-gray-600 dark:text-gray-400 ml-1 font-medium text-sm">

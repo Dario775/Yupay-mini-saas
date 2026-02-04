@@ -1,4 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useLocalStorage } from './useLocalStorage';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { adminApi, storeApi } from '@/lib/api';
 import type {
   Subscription,
   Store,
@@ -19,9 +22,9 @@ import type {
 // Configuración de planes (con flash offers)
 const PLAN_LIMITS = {
   free: { maxSalesPerMonth: 5, maxProducts: 10, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 0 },
-  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 9.99 },
-  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, hasFlashOffers: true, maxFlashOffersPerMonth: 2, maxFlashOfferRadius: 5, price: 29.99 },
-  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, hasFlashOffers: true, maxFlashOffersPerMonth: -1, maxFlashOfferRadius: 20, price: 99.99 },
+  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 5000 },
+  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, hasFlashOffers: true, maxFlashOffersPerMonth: 2, maxFlashOfferRadius: 5, price: 15000 },
+  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, hasFlashOffers: true, maxFlashOffersPerMonth: -1, maxFlashOfferRadius: 20, price: 45000 },
 };
 
 // Datos de demostración - Usuarios (vacío para producción)
@@ -41,11 +44,39 @@ const DEMO_ORDERS: Order[] = [];
 
 // Hook para Admin - Mejorado con métricas freemium
 export function useAdminData() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(DEMO_SUBSCRIPTIONS);
-  const [stores, setStores] = useState<Store[]>(DEMO_STORES);
-  const [users, setUsers] = useState<User[]>(DEMO_USERS);
+  const [subscriptions, setSubscriptions] = useLocalStorage<Subscription[]>('admin_subscriptions', DEMO_SUBSCRIPTIONS);
+  const [stores, setStores] = useLocalStorage<Store[]>('admin_stores', DEMO_STORES);
+  const [users, setUsers] = useLocalStorage<User[]>('admin_users', DEMO_USERS);
   const [orders] = useState<Order[]>(DEMO_ORDERS);
-  const [planLimits, setPlanLimits] = useState(PLAN_LIMITS);
+  const [planLimits, setPlanLimits] = useLocalStorage('admin_plan_limits', PLAN_LIMITS);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
+
+  // Sync with Supabase if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [dbPlans, dbSubs, dbUsers] = await Promise.all([
+          adminApi.getPlanConfigs(),
+          adminApi.getSubscriptions(),
+          adminApi.getUsers()
+        ]);
+
+        if (dbPlans) setPlanLimits(dbPlans);
+        // Note: Transformation might be needed for subs and users to match UI types
+        // if (dbSubs) setSubscriptions(dbSubs);
+        // if (dbUsers) setUsers(dbUsers);
+      } catch (err) {
+        console.error('Error fetching Supabase data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Métricas freemium
   const freeUsers = subscriptions.filter(s => s.plan === 'free').length;
@@ -66,12 +97,22 @@ export function useAdminData() {
     conversionRate,
   };
 
-  const updatePlanLimits = useCallback((plan: SubscriptionPlan, updates: Partial<typeof PLAN_LIMITS['basico']>) => {
+  const updatePlanLimits = useCallback(async (plan: SubscriptionPlan, updates: Partial<typeof PLAN_LIMITS['basico']>) => {
+    // 1. Update local state
     setPlanLimits(prev => ({
       ...prev,
       [plan]: { ...prev[plan], ...updates }
     }));
-  }, []);
+
+    // 2. Update Supabase if configured
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updatePlanLimit(plan, updates);
+      } catch (err) {
+        console.error('Error updating plan in Supabase:', err);
+      }
+    }
+  }, [setPlanLimits]);
 
   // CRUD Suscripciones
   const addSubscription = useCallback((data: { userId: string; storeId?: string; plan: SubscriptionPlan; months: number }) => {
@@ -282,63 +323,106 @@ export function useClientData(userId: string) {
 
 // Hook para Tienda - Con lógica de límites
 export function useStoreData(storeId: string) {
-  // Todas las tiendas empiezan vacías (datos reales vendrán de Supabase)
-  // Datos iniciales para pruebas (Demo)
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 'p1',
-      storeId: 'store1',
-      name: 'Auriculares Pro Wireless',
-      description: 'Auriculares con cancelación de ruido de alta fidelidad.',
-      price: 15000,
-      stock: 15,
-      category: 'Audio',
-      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 'p2',
-      storeId: 'store1',
-      name: 'Smartwatch Serie X',
-      description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
-      price: 25000,
-      stock: 8,
-      category: 'Electrónica',
-      images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
-      isActive: true,
-      createdAt: new Date()
-    }
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>({
-    id: 'sub1',
-    userId: 'u1',
-    plan: 'profesional',
-    status: 'activa',
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    price: 29.99,
-    autoRenew: true,
-    salesThisMonth: 0,
-    lastResetDate: new Date()
-  });
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [store, setStore] = useState<Store | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
 
-  // Store State
-  const [store, setStore] = useState<Store | undefined>({
-    id: 'store1',
-    ownerId: 'u1',
-    name: 'Mi Tienda Tech',
-    description: 'La mejor tecnología a tu alcance.',
-    category: 'Electrónica',
-    address: 'Av. Corrientes 1234, CABA',
-    phone: '1122334455',
-    email: 'tienda@demo.com',
-    isActive: true,
-    rating: 4.8,
-    createdAt: new Date(),
-    location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
-  });
+  // Sync with Supabase if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      // Demo initial data
+      if (storeId === 'store1') {
+        setProducts([
+          {
+            id: 'p1',
+            storeId: 'store1',
+            name: 'Auriculares Pro Wireless',
+            description: 'Auriculares con cancelación de ruido de alta fidelidad.',
+            price: 15000,
+            stock: 15,
+            category: 'Audio',
+            images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
+            isActive: true,
+            createdAt: new Date()
+          },
+          {
+            id: 'p2',
+            storeId: 'store1',
+            name: 'Smartwatch Serie X',
+            description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
+            price: 25000,
+            stock: 8,
+            category: 'Electrónica',
+            images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
+            isActive: true,
+            createdAt: new Date()
+          }
+        ]);
+        setStore({
+          id: 'store1',
+          ownerId: 'u1',
+          name: 'Mi Tienda Tech',
+          description: 'La mejor tecnología a tu alcance.',
+          category: 'Electrónica',
+          address: 'Av. Corrientes 1234, CABA',
+          phone: '1122334455',
+          email: 'tienda@demo.com',
+          isActive: true,
+          rating: 4.8,
+          createdAt: new Date(),
+          location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
+        });
+        setSubscription({
+          id: 'sub1',
+          userId: 'u1',
+          plan: 'profesional',
+          status: 'activa',
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          price: 15000,
+          autoRenew: true,
+          salesThisMonth: 0,
+          lastResetDate: new Date()
+        });
+      }
+      return;
+    }
+
+    const fetchStoreData = async () => {
+      setIsLoading(true);
+      try {
+        const [dbStore, dbProducts] = await Promise.all([
+          storeApi.getStore(storeId),
+          storeApi.getProducts(storeId)
+        ]);
+
+        if (dbStore) {
+          setStore({
+            ...dbStore,
+            ownerId: dbStore.owner_id,
+            isActive: dbStore.is_active,
+            createdAt: new Date(dbStore.created_at)
+          });
+        }
+        if (dbProducts) {
+          setProducts(dbProducts.map((p: any) => ({
+            ...p,
+            storeId: p.store_id,
+            isActive: p.is_active,
+            createdAt: new Date(p.created_at)
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching store data from Supabase:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStoreData();
+  }, [storeId]);
 
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([
     { id: 's1', name: 'Envío Express', price: 500, estimatedDays: '24-48hs', isActive: true },
@@ -349,13 +433,15 @@ export function useStoreData(storeId: string) {
     { id: 'm2', type: 'transferencia', name: 'Transferencia', isActive: true }
   ]);
 
+  const [planLimits] = useLocalStorage('admin_plan_limits', PLAN_LIMITS);
+
   const updateStoreInfo = useCallback((updates: Partial<Store>) => {
     setStore(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
 
   // Límites del plan actual
   const currentPlan = subscription?.plan || 'free';
-  const limits = PLAN_LIMITS[currentPlan];
+  const limits = planLimits[currentPlan as keyof typeof planLimits] || PLAN_LIMITS.free;
   const salesThisMonth = subscription?.salesThisMonth || 0;
   const isLimitReached = limits.maxSalesPerMonth !== -1 && salesThisMonth >= limits.maxSalesPerMonth;
   const productsLimit = limits.maxProducts;
@@ -420,9 +506,9 @@ export function useStoreData(storeId: string) {
       ...prev,
       plan: newPlan,
       status: 'activa',
-      price: PLAN_LIMITS[newPlan].price,
+      price: planLimits[newPlan].price,
     } : prev);
-  }, []);
+  }, [planLimits]);
 
   // CRUD Métodos de envío
   const addShippingMethod = useCallback((method: Omit<typeof shippingMethods[0], 'id'>) => {
@@ -565,7 +651,7 @@ export function useStoreData(storeId: string) {
 
   return {
     store, updateStoreInfo,
-    stats, products, orders, subscription, pendingOrders, lowStockProducts, planLimits: PLAN_LIMITS,
+    stats, products, orders, subscription, pendingOrders, lowStockProducts, planLimits,
     isLimitReached, canAddProduct, isOnTrial, trialDaysRemaining,
     addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock, recordSale, upgradePlan,
     // Métodos de envío
