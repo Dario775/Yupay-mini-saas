@@ -138,22 +138,53 @@ export function useAdminData() {
     return newSub;
   }, [planLimits]);
 
-  const updateSubscription = useCallback((id: string, updates: Partial<Subscription>) => {
+  const updateSubscription = useCallback(async (id: string, updates: Partial<Subscription>) => {
+    // 1. Local
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-  }, []);
 
-  const updateSubscriptionStatus = useCallback((id: string, status: Subscription['status']) => {
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updateSubscription(id, updates);
+      } catch (err) {
+        console.error('Error updating subscription in Supabase:', err);
+      }
+    }
+  }, [setSubscriptions]);
+
+  const updateSubscriptionStatus = useCallback(async (id: string, status: Subscription['status']) => {
+    // 1. Local
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-  }, []);
 
-  const upgradePlan = useCallback((id: string, newPlan: SubscriptionPlan) => {
-    setSubscriptions(prev => prev.map(s => s.id === id ? {
-      ...s,
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updateSubscription(id, { status });
+      } catch (err) {
+        console.error('Error updating subscription status in Supabase:', err);
+      }
+    }
+  }, [setSubscriptions]);
+
+  const upgradePlan = useCallback(async (id: string, newPlan: SubscriptionPlan) => {
+    const updates = {
       plan: newPlan,
-      status: 'activa',
+      status: 'activa' as const,
       price: planLimits[newPlan].price,
-    } : s));
-  }, [planLimits]);
+    };
+
+    // 1. Local
+    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updateSubscription(id, updates);
+      } catch (err) {
+        console.error('Error upgrading plan in Supabase:', err);
+      }
+    }
+  }, [planLimits, setSubscriptions]);
 
   const deleteSubscription = useCallback((id: string) => {
     setSubscriptions(prev => prev.filter(s => s.id !== id));
@@ -166,32 +197,64 @@ export function useAdminData() {
     return newStore;
   }, []);
 
-  const updateStore = useCallback((id: string, updates: Partial<Store>) => {
+  const updateStore = useCallback(async (id: string, updates: Partial<Store>) => {
     setStores(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-  }, []);
 
-  const updateStoreStatus = useCallback((id: string, isActive: boolean) => {
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.updateStore(id, updates);
+      } catch (err) {
+        console.error('Error updating store in Supabase:', err);
+      }
+    }
+  }, [setStores]);
+
+  const updateStoreStatus = useCallback(async (id: string, isActive: boolean) => {
     setStores(prev => prev.map(s => s.id === id ? { ...s, isActive } : s));
-  }, []);
+
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.updateStore(id, { isActive });
+      } catch (err) {
+        console.error('Error updating store status in Supabase:', err);
+      }
+    }
+  }, [setStores]);
 
   const deleteStore = useCallback((id: string) => {
     setStores(prev => prev.filter(s => s.id !== id));
-  }, []);
+  }, [setStores]);
 
   // CRUD Usuarios
   const addUser = useCallback((data: Omit<User, 'id' | 'createdAt' | 'avatar'>) => {
     const newUser: User = { ...data, id: `user${Date.now()}`, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`, createdAt: new Date() };
     setUsers(prev => [newUser, ...prev]);
     return newUser;
-  }, []);
+  }, [setUsers]);
 
-  const updateUser = useCallback((id: string, updates: Partial<User>) => {
+  const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-  }, []);
 
-  const updateUserStatus = useCallback((id: string, isActive: boolean) => {
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updateUser(id, updates);
+      } catch (err) {
+        console.error('Error updating user in Supabase:', err);
+      }
+    }
+  }, [setUsers]);
+
+  const updateUserStatus = useCallback(async (id: string, isActive: boolean) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, isActive } : u));
-  }, []);
+
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.updateUser(id, { isActive });
+      } catch (err) {
+        console.error('Error updating user status in Supabase:', err);
+      }
+    }
+  }, [setUsers]);
 
   const deleteUser = useCallback((id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));

@@ -113,11 +113,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(true);
           await loadUserProfile(newSession.user.id);
           setIsLoading(false);
-        } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setStore(null);
           setSubscription(null);
-          if (event === 'SIGNED_OUT') setIsLoading(false);
+          setIsLoading(false);
+        } else if (event === 'USER_UPDATED') {
+          if (newSession?.user) {
+            await loadUserProfile(newSession.user.id);
+          }
         }
       }
     );

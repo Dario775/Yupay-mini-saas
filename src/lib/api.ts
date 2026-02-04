@@ -33,6 +33,9 @@ export const adminApi = {
         if (updates.maxSalesPerMonth !== undefined) dbUpdates.max_sales_per_month = updates.maxSalesPerMonth;
         if (updates.maxProducts !== undefined) dbUpdates.max_products = updates.maxProducts;
         if (updates.maxStores !== undefined) dbUpdates.max_stores = updates.maxStores;
+        if (updates.hasFlashOffers !== undefined) dbUpdates.has_flash_offers = updates.hasFlashOffers;
+        if (updates.maxFlashOffersPerMonth !== undefined) dbUpdates.max_flash_offers_per_month = updates.maxFlashOffersPerMonth;
+        if (updates.maxFlashOfferRadius !== undefined) dbUpdates.max_flash_offer_radius = updates.maxFlashOfferRadius;
 
         const { error } = await supabase
             .from('plan_configs')
@@ -57,6 +60,28 @@ export const adminApi = {
             .order('created_at', { ascending: false });
         if (error) throw error;
         return data;
+    },
+
+    async updateSubscription(id: string, updates: any) {
+        // Map common fields
+        const dbUpdates: any = { ...updates };
+        if (updates.startDate) dbUpdates.start_date = updates.startDate;
+        if (updates.endDate) dbUpdates.end_date = updates.endDate;
+        if (updates.trialEndDate) dbUpdates.trial_end_date = updates.trialEndDate;
+
+        const { error } = await supabase
+            .from('subscriptions')
+            .update(dbUpdates)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async updateUser(id: string, updates: any) {
+        const { error } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', id);
+        if (error) throw error;
     }
 };
 
@@ -82,6 +107,18 @@ export const storeApi = {
             .order('created_at', { ascending: false });
         if (error) throw error;
         return data;
+    },
+
+    async updateStore(id: string, updates: any) {
+        const dbUpdates: any = { ...updates };
+        if (updates.ownerId) dbUpdates.owner_id = updates.ownerId;
+        if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+
+        const { error } = await supabase
+            .from('stores')
+            .update(dbUpdates)
+            .eq('id', id);
+        if (error) throw error;
     },
 
     async addProduct(product: any) {

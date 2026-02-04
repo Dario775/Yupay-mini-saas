@@ -27,7 +27,11 @@ import { SalesView } from './StoreDashboard/SalesView';
 import { SettingsView } from './StoreDashboard/SettingsView';
 
 export default function StoreDashboard() {
-  const { user } = useAuth();
+  const { user, store: authStore } = useAuth();
+
+  // Usar el ID de la tienda del usuario autenticado
+  const storeId = authStore?.id || 'demo-store';
+
   const {
     stats, products, orders, lowStockProducts, subscription,
     addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock,
@@ -37,7 +41,7 @@ export default function StoreDashboard() {
     // Flash Offers
     flashOffers, activeFlashOffers, canCreateFlashOffer, flashOffersRemaining,
     maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
-  } = useStoreData('store1');
+  } = useStoreData(storeId);
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('products');
@@ -94,18 +98,30 @@ export default function StoreDashboard() {
             <Store className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Mi Tienda</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+              {store?.name || 'Mi Tienda'}
+            </h1>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <Badge variant="outline" className="h-4 text-[8px] border-emerald-500/50 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase">Online</Badge>
               Gestionando pedidos y catálogo
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           <Button
-            size="sm"
             variant="outline"
-            className="h-8 text-[10px] gap-1 px-2"
+            size="sm"
+            className="h-8 text-xs gap-1.5 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            onClick={() => window.open(`/store/${store?.id || 'demo'}`, '_blank')}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Ver mi tienda
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             onClick={() => setIsPreviewOpen(true)}
           >
             <Eye className="h-3 w-3" />Ver tienda

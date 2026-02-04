@@ -47,7 +47,9 @@ function HomeWrapper() {
 
   // Redirigir automáticamente si ya está logueado
   useEffect(() => {
+    // Solo redirigir si NO estamos cargando y el usuario existe
     if (!isLoading && user) {
+      console.log('Redirecting to dashboard as user is already logged in');
       navigate('/dashboard', { replace: true });
     }
   }, [user, isLoading, navigate]);
@@ -156,6 +158,7 @@ function AdminRoute() {
 }
 
 function DashboardLayout() {
+  const navigate = useNavigate();
   const { user, subscription, logout } = useAuth();
   const [clientTab, setClientTab] = useState('shop');
   const [cartCount, setCartCount] = useState(0);
@@ -187,7 +190,7 @@ function DashboardLayout() {
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 gap-2">
-            <div className="flex items-center gap-2.5 shrink-0 group cursor-pointer" onClick={() => window.location.href = '/'}>
+            <div className="flex items-center gap-2.5 shrink-0 group cursor-pointer" onClick={() => navigate('/dashboard')}>
               {/* Logo simplified */}
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold">Y</div>
               <span className="font-black text-xl text-gray-900 dark:text-white">YUPAY</span>
