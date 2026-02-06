@@ -13,8 +13,17 @@ if (!isSupabaseConfigured) {
     );
 }
 
-// Crear cliente (con valores vacíos si no está configurado - no crasheará)
+// Crear cliente con opciones de persistencia de sesión
 export const supabase: SupabaseClient = createClient(
     supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder-key'
+    supabaseAnonKey || 'placeholder-key',
+    {
+        auth: {
+            persistSession: true,
+            storageKey: 'yupay-auth',
+            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+        }
+    }
 );

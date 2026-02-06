@@ -107,6 +107,7 @@ export interface Subscription {
   // Contadores de uso
   salesThisMonth: number;
   lastResetDate: Date;        // Fecha del último reset mensual
+  createdAt?: Date;
 }
 
 // Tiendas

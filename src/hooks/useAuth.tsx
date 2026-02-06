@@ -12,6 +12,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterStoreData, roleOverride?: 'tienda' | 'cliente') => Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }>;
+  clearAuthSession: () => void;
   isLoading: boolean;
   authError: string | null;
   isDemoMode: boolean;
@@ -76,8 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const isDemoMode = !isSupabaseConfigured;
 
-  // Use ref to track user state inside callbacks without dependency issues
+  // Use refs to track state across async cycles without dependency baggage
   const userRef = useRef<User | null>(null);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     userRef.current = user;
@@ -97,42 +99,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, newSession) => {
         if (!isMounted) return;
 
-        console.log('🔔 Auth Event:', event, newSession?.user?.email);
+        console.log('🔔 Auth Event:', event, 'User:', newSession?.user?.email);
         setSession(newSession);
 
         try {
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             if (newSession?.user) {
-              // CHANGE: Check if it's the same user to avoid infinite loading loops on tab focus
-              if (userRef.current?.id === newSession.user.id) {
-                console.log('🔄 Session refreshed for same user, skipping profile reload.');
+              const currentUserId = userRef.current?.id;
+              const newUserId = newSession.user.id;
+
+              // Si ya estamos cargando, no reentrar
+              if (loadingRef.current) {
+                console.log('⏳ Already loading profile, skipping duplicate event.');
+                return;
+              }
+
+              // Si es INITIAL_SESSION y ya tenemos usuario (mismo ID), no recargamos todo
+              if (event === 'INITIAL_SESSION' && currentUserId === newUserId) {
+                console.log('🔄 Session persistent for same user, skipping profile reload.');
                 setIsLoading(false);
                 return;
               }
 
+              console.log(`🚀 ${event}: Loading user profile...`);
+              loadingRef.current = true;
               setIsLoading(true);
 
-              // Add safety timeout
+              // Add safety timeout (Stuck Detector)
               const timer = setTimeout(() => {
-                setIsLoading(prev => {
-                  if (prev) {
-                    console.warn("⚠️ Auth timeout reached, forcing isLoading to false");
-                    return false;
-                  }
-                  return prev;
-                });
-              }, 7000);
+                if (loadingRef.current) {
+                  console.warn("⚠️ Auth loading STUCK (8s). Clearing local storage for recovery...");
+                  loadingRef.current = false;
+                  clearAuthSession();
+                  setIsLoading(false);
+                }
+              }, 8000);
 
               try {
-                await loadUserProfile(newSession.user.id);
+                // Pasamos el objeto de usuario directamente para evitar llamadas extras
+                await loadUserProfile(newUserId, newSession.user);
+              } catch (err) {
+                console.error('❌ Critical error loading profile:', err);
+                // Si falla críticamente, limpiamos para evitar bucles infinitos
+                clearAuthSession();
               } finally {
                 clearTimeout(timer);
-                // loadUserProfile already sets isLoading(false)
+                loadingRef.current = false;
+                setIsLoading(false);
               }
             } else {
               setIsLoading(false);
             }
           } else if (event === 'SIGNED_OUT') {
+            console.log('🚪 User signed out, clearing context');
+            loadingRef.current = false;
             setUser(null);
             setStore(null);
             setSubscription(null);
@@ -140,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           console.error('❌ Error in auth state change:', err);
+          loadingRef.current = false;
           setIsLoading(false);
         }
       }
@@ -152,8 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isDemoMode]);
 
   // Cargar perfil, tienda y suscripción del usuario
-  const loadUserProfile = async (userId: string) => {
-    console.log('🔍 Loading profile for userId:', userId);
+  const loadUserProfile = async (userId: string, authUser?: any) => {
     try {
       // 1. Cargar perfil básico
       const { data: profileData, error: profileError } = await supabase
@@ -166,59 +186,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileError) {
         console.warn('⚠️ No profile found in DB. Constructing fallback user context...');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+
+        // Use authUser if provided, otherwise fetch
+        let activeUser = authUser;
+        if (!activeUser) {
+          const { data: { session } } = await supabase.auth.getSession();
+          activeUser = session?.user;
+        }
+
+        if (!activeUser) return;
 
         // Creamos un perfil temporal basado en metadata para no bloquear la UI
-        const meta = session.user.user_metadata;
+        const meta = activeUser.user_metadata;
         profile = {
-          id: session.user.id,
-          email: session.user.email!,
-          name: meta?.name || session.user.email?.split('@')[0],
-          role: meta?.role || (isAdminEmail(session.user.email!) ? 'admin' : 'cliente'),
+          id: activeUser.id,
+          email: activeUser.email!,
+          name: meta?.name || activeUser.email?.split('@')[0],
+          role: meta?.role || (isAdminEmail(activeUser.email!) ? 'admin' : 'cliente'),
           created_at: new Date().toISOString(),
           is_active: true
         };
       }
-
-      console.log('✅ User Context Loaded:', profile.email, 'Role:', profile.role);
 
       // 2. Determinar el rol inicial
       const isGlobalAdmin = isAdminEmail(profile.email);
       let effectiveRole = isGlobalAdmin ? 'admin' : (profile.role as UserRole);
 
       // 3. SIEMPRE intentar cargar tienda del dueño
-      const { data: initialStoreData, error: storeError } = await supabase
+      // Intentamos obtener todas las tiendas del dueño para evitar errores de duplicidad con maybeSingle()
+      const { data: allStores, error: allStoresError } = await supabase
         .from('stores')
         .select('*')
-        .eq('owner_id', userId)
-        .maybeSingle();
+        .eq('owner_id', userId);
 
-      let storeData = initialStoreData;
+      // Si hay error de red o permisos, lo logueamos
+      if (allStoresError) {
+        console.error('❌ loadUserProfile: Error fetching stores:', allStoresError);
+      }
+
+      // Tomamos la primera tienda disponible
+      let storeData = allStores && allStores.length > 0 ? allStores[0] : null;
+
+      if (allStores && allStores.length > 1) {
+        console.warn(`⚠️ loadUserProfile: User ${userId} has ${allStores.length} stores. Using the first one found.`);
+      }
 
       if (storeData && effectiveRole !== 'admin') {
-        console.log('🏠 Store found for user (switching to store view):', storeData.name);
         effectiveRole = 'tienda';
-      } else if (storeData && effectiveRole === 'admin') {
-        console.log('🛡️ Admin user has a store, but keeping admin role');
       } else if (effectiveRole === 'tienda' && !storeData && !isGlobalAdmin) {
         // C. RECUPERACIÓN DE TIENDA:
-        // Si es rol 'tienda' pero no hay datos en 'stores', verificamos metadatos para crearla.
-        // Esto pasa cuando el usuario se registró con confirmación de email.
-        console.log('⚠️ Store role implies store, but none found. Checking metadata for deferred creation...');
-
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        const metadata = authUser?.user_metadata;
+        // Solo si REALMENTE no hay ninguna tienda en la base de datos
+        const { data: { user: authUserObj } } = await supabase.auth.getUser();
+        const metadata = authUserObj?.user_metadata;
 
         if (metadata?.store_name) {
-          console.log('✨ Found store metadata! Creating store now...', metadata.store_name);
           try {
             // Crear tienda tardía
             const { data: newStore, error: newStoreErr } = await supabase.from('stores').insert({
               owner_id: userId,
               name: metadata.store_name,
               category: metadata.store_category || 'General',
-              email: authUser?.email,
+              email: authUserObj?.email,
               phone: metadata.phone || null,
               is_active: true,
             }).select().single();
@@ -244,19 +272,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
               // Actualizar variables locales para que la UI se refresque inmediatamente
               storeData = newStore;
-              console.log('✅ Deferred store creation successful:', newStore.name);
-
-              // Limpiar metadata para no reintentar (opcional, pero buena práctica)
-              /* await supabase.auth.updateUser({ data: { store_name: null } }); */
-            } else {
-              console.error('❌ Failed to create deferred store:', newStoreErr);
             }
           } catch (recoveryErr) {
             console.error('❌ Error in deferred store creation:', recoveryErr);
           }
         }
-      } else {
-        console.log('ℹ️ No core store found for this user ID');
       }
 
       const loadedUser: User = {
@@ -270,7 +290,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isActive: profile.is_active,
       };
 
-      console.log('🚀 Setting final user role:', loadedUser.role);
       setUser(loadedUser);
 
       // 4. Si tiene tienda (o la acabamos de crear), cargar datos completos
@@ -299,27 +318,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         // Cargar suscripción
-        const { data: subData } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('store_id', storeData.id)
-          .maybeSingle();
+        // Cargar suscripción de forma segura (usamos limit(1) por si hay duplicados residuales)
+        try {
+          const { data: subsData, error: subsError } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('store_id', storeData.id)
+            .limit(1);
 
-        if (subData) {
-          setSubscription({
-            id: subData.id,
-            userId: subData.user_id,
-            storeId: subData.store_id,
-            plan: subData.plan,
-            status: subData.status,
-            startDate: new Date(subData.start_date),
-            endDate: new Date(subData.end_date),
-            trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
-            price: parseFloat(subData.price) || 0,
-            autoRenew: subData.auto_renew,
-            salesThisMonth: subData.sales_this_month || 0,
-            lastResetDate: new Date(subData.last_reset_date),
-          });
+          if (subsError) {
+            console.error('⚠️ Error fetching subscription:', subsError);
+          } else if (subsData && subsData.length > 0) {
+            const subData = subsData[0];
+            setSubscription({
+              id: subData.id,
+              userId: subData.user_id,
+              storeId: subData.store_id,
+              plan: subData.plan,
+              status: subData.status,
+              startDate: new Date(subData.start_date),
+              endDate: subData.end_date ? new Date(subData.end_date) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year if missing
+              trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
+              price: parseFloat(subData.price) || 0,
+              autoRenew: subData.auto_renew,
+              salesThisMonth: subData.sales_this_month || 0,
+              lastResetDate: new Date(subData.last_reset_date),
+              createdAt: new Date(subData.created_at),
+            });
+          }
+        } catch (subErr) {
+          console.error('❌ Failed to process subscription data:', subErr);
         }
       }
       console.log('✅ loadUserProfile completed successfully');

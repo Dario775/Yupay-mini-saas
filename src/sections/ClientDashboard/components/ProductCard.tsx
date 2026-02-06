@@ -66,7 +66,7 @@ export function ProductCard({
 
             {/* Image */}
             <div
-                className="relative aspect-[4/3] bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer"
+                className="relative aspect-square bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer p-4"
                 onClick={() => onView?.(product)}
             >
                 {/* Secondary Image (Hover) */}
@@ -74,7 +74,7 @@ export function ProductCard({
                     <img
                         src={product.images[1]}
                         alt={`${product.name} alternate`}
-                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100 z-10"
+                        className="absolute inset-0 w-full h-full object-contain p-4 transition-opacity duration-500 opacity-0 group-hover:opacity-100 z-10"
                     />
                 )}
 
@@ -83,7 +83,7 @@ export function ProductCard({
                     <img
                         src={product.images[0]}
                         alt={product.name}
-                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
+                        className={`w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-200 dark:text-gray-700">

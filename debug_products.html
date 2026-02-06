@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Products</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <h1>Debug: Verificar Store IDs de Productos</h1>
+    <pre id="output">Cargando...</pre>
+    <script>
+        // REEMPLAZA ESTOS VALORES CON TUS CREDENCIALES DE SUPABASE
+        const SUPABASE_URL = 'TU_SUPABASE_URL';
+        const SUPABASE_KEY = 'TU_SUPABASE_ANON_KEY';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function debug() {
+            const output = document.getElementById('output');
+            let result = '';
+
+            // Obtener todas las tiendas
+            const { data: stores, error: storeError } = await supabase.from('stores').select('id, name, owner_id');
+            result += '=== TIENDAS ===\n';
+            if (stores) {
+                stores.forEach(s => {
+                    result += `ID: ${s.id}\n   Nombre: ${s.name}\n   Owner: ${s.owner_id}\n\n`;
+                });
+            }
+
+            // Obtener todos los productos
+            const { data: products, error: productError } = await supabase.from('products').select('id, name, store_id');
+            result += '\n=== PRODUCTOS ===\n';
+            if (products) {
+                products.forEach(p => {
+                    result += `ID: ${p.id}\n   Nombre: ${p.name}\n   Store ID: ${p.store_id}\n\n`;
+                });
+            }
+
+            // Verificar coincidencias
+            result += '\n=== VERIFICACIÓN ===\n';
+            if (stores && products) {
+                const storeIds = stores.map(s => s.id);
+                const orphanProducts = products.filter(p => !storeIds.includes(p.store_id));
+                if (orphanProducts.length > 0) {
+                    result += '⚠️ PRODUCTOS HUÉRFANOS (store_id no coincide con ninguna tienda):\n';
+                    orphanProducts.forEach(p => {
+                        result += `   - ${p.name} (store_id: ${p.store_id})\n`;
+                    });
+                } else {
+                    result += '✅ Todos los productos tienen un store_id válido\n';
+                }
+            }
+
+            output.textContent = result;
+        }
+
+        debug();
+    </script>
+</body>
+
+</html>
