@@ -208,15 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Asignar usuario básico INMEDIATAMENTE para evitar stuck state
     setUser(basicUser);
-
-    // Para usuarios tienda, NO liberamos la UI todavía - esperamos a cargar su tienda
-    // Para otros roles (cliente, admin), liberamos inmediatamente
-    if (basicUser.role !== 'tienda') {
-      setIsLoading(false);
-      console.log('✅ Basic user set and UI released (no tienda):', basicUser.email, 'Role:', basicUser.role);
-    } else {
-      console.log('⏳ Basic user set, waiting for store data:', basicUser.email, 'Role:', basicUser.role);
-    }
+    // LIBERAR LA UI INMEDIATAMENTE - las queries de enriquecimiento corren en segundo plano
+    setIsLoading(false);
+    console.log('✅ Basic user set and UI released:', basicUser.email, 'Role:', basicUser.role);
 
     try {
       // Ahora intentamos enriquecer con datos de la BD
