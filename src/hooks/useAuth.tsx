@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let isMounted = true;
 
-    // Listener de cambios de autenticación con manejo de errores robusto
+    // Listener de cambios de autenticación
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!isMounted) return;
@@ -98,36 +98,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newSession?.user) {
               setIsLoading(true);
               await loadUserProfile(newSession.user.id);
+              // loadUserProfile ya setea isLoading = false en su finally
+            } else {
+              setIsLoading(false);
             }
           } else if (event === 'SIGNED_OUT') {
             setUser(null);
             setStore(null);
             setSubscription(null);
+            setIsLoading(false);
           }
         } catch (err) {
           console.error('❌ Error in auth state change:', err);
-        } finally {
-          // Garantizar que isLoading siempre termine en false
-          if (isMounted) {
-            setTimeout(() => {
-              if (isMounted) setIsLoading(false);
-            }, 500); // Pequeño buffer para evitar flickering
-          }
+          setIsLoading(false);
         }
       }
     );
 
-    // Fail-safe: Si pasan 5 segundos y sigue cargando, forzar el apagado
-    const timer = setTimeout(() => {
-      if (isMounted && isLoading) {
-        console.warn('⚠️ Auth timeout reached, forcing isLoading to false');
-        setIsLoading(false);
-      }
-    }, 5000);
-
     return () => {
       isMounted = false;
-      clearTimeout(timer);
       authSubscription.unsubscribe();
     };
   }, [isDemoMode]);
@@ -303,8 +292,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       }
+      console.log('✅ loadUserProfile completed successfully');
     } catch (error) {
       console.error('❌ Critical error in loadUserProfile:', error);
+    } finally {
+      // Garantizamos que isLoading termine en false
+      setIsLoading(false);
     }
   };
 
@@ -371,9 +364,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isDemoMode]);
 
-  const register = useCallback(async (data: RegisterStoreData): Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }> => {
+  const register = useCallback(async (data: RegisterStoreData, roleOverride?: 'tienda' | 'cliente'): Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }> => {
     setIsLoading(true);
     setAuthError(null);
+
+    const effectiveRole = roleOverride || 'tienda';
 
     try {
       // 1. Crear usuario en Supabase Auth
@@ -383,11 +378,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             name: data.ownerName,
-            role: 'tienda',
-            // Guardamos datos de la tienda en metadata para recuperarlos si hay confirmación de email
-            store_name: data.storeName,
-            store_category: data.category,
-            phone: data.phone,
+            role: effectiveRole,
+            // Solo guardar datos de tienda si es rol tienda
+            ...(effectiveRole === 'tienda' && {
+              store_name: data.storeName,
+              store_category: data.category,
+              phone: data.phone,
+            }),
           },
         },
       });
@@ -580,17 +577,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isDemoMode]);
 
   const logout = useCallback(async () => {
-    // 1. Limpiar estado local PRIMERO para respuesta inmediata en la UI
+    // 1. Limpiar estado local PRIMERO
     setUser(null);
     setStore(null);
     setSubscription(null);
     setSession(null);
+    setIsLoading(false);
 
-    // 2. Redirigir inmediatamente (no esperar a Supabase)
+    // 2. Hacer signOut de Supabase (rápido, no debería demorar)
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+
+    // 3. Redirigir después del signOut
     window.location.href = '/';
-
-    // 3. El signOut corre en background (la redirección ya sucedió)
-    supabase.auth.signOut().catch(err => console.error('Logout error:', err));
   }, []);
 
   const value = {

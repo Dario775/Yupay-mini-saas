@@ -12,7 +12,9 @@ import {
     EyeOff,
     Loader2,
     Gift,
-    Clock
+    Clock,
+    User,
+    ShoppingBag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +64,8 @@ interface RegisterProps {
 
 export default function Register({ onBack, onSuccess }: RegisterProps) {
     const { register, isLoading } = useAuth();
-    const [step, setStep] = useState(1); // 1: Datos, 2: Plan, 3: Confirmación
+    const [step, setStep] = useState(0); // 0: Tipo de cuenta, 1: Datos, 2: Plan, 3: Confirmación
+    const [accountType, setAccountType] = useState<'tienda' | 'cliente' | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('profesional');
 
@@ -122,6 +125,35 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
         }
     };
 
+    // Registro simplificado para clientes
+    const handleSubmit = async () => {
+        const newErrors: Partial<Record<keyof RegisterStoreData, string>> = {};
+        if (!formData.ownerName.trim()) newErrors.ownerName = 'Tu nombre es requerido';
+        if (!formData.email.trim()) newErrors.email = 'El email es requerido';
+        if (!formData.email.includes('@')) newErrors.email = 'Email inválido';
+        if (formData.password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        try {
+            const clientData: RegisterStoreData = { ...formData, storeName: '', category: '' };
+            const result = await register(clientData, 'cliente');
+
+            if (result.emailConfirmationRequired) {
+                toast.success('¡Registro exitoso! Revisa tu email para confirmar.', { duration: 6000 });
+                onBack();
+                return;
+            }
+            toast.success('¡Cuenta creada exitosamente!');
+            onSuccess();
+        } catch (error) {
+            // Error handled by useAuth
+        }
+    };
+
     const categories = ['Tecnología', 'Moda', 'Gastronomía', 'Hogar', 'Deportes', 'Salud y Belleza', 'Otro'];
 
     return (
@@ -141,43 +173,106 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                 {/* Progress Steps */}
                 <div className="flex justify-center mb-8">
                     <div className="flex items-center gap-2">
-                        {[1, 2, 3].map((s) => (
+                        {(accountType === 'tienda' ? [0, 1, 2, 3] : [0, 1]).map((s, idx, arr) => (
                             <div key={s} className="flex items-center">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${step >= s
                                     ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                                     : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                                     }`}>
-                                    {step > s ? <Check className="h-5 w-5" /> : s}
+                                    {step > s ? <Check className="h-5 w-5" /> : idx + 1}
                                 </div>
-                                {s < 3 && <div className={`w-12 h-1 mx-1 rounded ${step > s ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-200 dark:bg-gray-700'}`} />}
+                                {idx < arr.length - 1 && <div className={`w-12 h-1 mx-1 rounded ${step > s ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-200 dark:bg-gray-700'}`} />}
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Step 1: Datos de la tienda */}
+                {/* Step 0: Tipo de cuenta */}
+                {step === 0 && (
+                    <Card className="dark:bg-gray-800 dark:border-gray-700 shadow-xl">
+                        <CardHeader className="text-center">
+                            <CardTitle className="dark:text-white text-2xl">¿Cómo quieres usar Yupay?</CardTitle>
+                            <CardDescription>Elige el tipo de cuenta que necesitas</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Opción Tienda */}
+                                <button
+                                    onClick={() => { setAccountType('tienda'); setStep(1); }}
+                                    className="group p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-violet-500 dark:hover:border-violet-500 transition-all hover:shadow-lg hover:shadow-violet-500/10 text-left"
+                                >
+                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <Store className="h-7 w-7 text-white" />
+                                    </div>
+                                    <h3 className="text-xl font-bold dark:text-white mb-2">Quiero vender</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                        Crea tu tienda, sube productos y empieza a vender online.
+                                    </p>
+                                    <div className="flex items-center text-violet-600 dark:text-violet-400 font-medium text-sm">
+                                        Crear mi tienda <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                </button>
+
+                                {/* Opción Cliente */}
+                                <button
+                                    onClick={() => { setAccountType('cliente'); setStep(1); }}
+                                    className="group p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all hover:shadow-lg hover:shadow-emerald-500/10 text-left"
+                                >
+                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <ShoppingBag className="h-7 w-7 text-white" />
+                                    </div>
+                                    <h3 className="text-xl font-bold dark:text-white mb-2">Quiero comprar</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                        Explora productos, guarda favoritos y haz pedidos fácilmente.
+                                    </p>
+                                    <div className="flex items-center text-emerald-600 dark:text-emerald-400 font-medium text-sm">
+                                        Crear cuenta de cliente <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div className="mt-6 text-center">
+                                <Button variant="ghost" onClick={onBack} className="text-gray-500">
+                                    <ArrowLeft className="h-4 w-4 mr-2" /> Volver al inicio
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Step 1: Datos del usuario/tienda */}
                 {step === 1 && (
                     <Card className="dark:bg-gray-800 dark:border-gray-700 shadow-xl">
                         <CardHeader>
                             <CardTitle className="dark:text-white flex items-center gap-2">
-                                <Rocket className="h-5 w-5 text-violet-500" />
-                                ¡Súper! Empecemos con tu tienda
+                                {accountType === 'tienda' ? (
+                                    <><Store className="h-5 w-5 text-violet-500" /> ¡Súper! Empecemos con tu tienda</>
+                                ) : (
+                                    <><User className="h-5 w-5 text-emerald-500" /> Crear tu cuenta de cliente</>
+                                )}
                             </CardTitle>
-                            <CardDescription>Cuéntanos un poquito sobre tu gran idea para empezar YA</CardDescription>
+                            <CardDescription>
+                                {accountType === 'tienda'
+                                    ? 'Cuéntanos un poquito sobre tu gran idea para empezar YA'
+                                    : 'Solo necesitamos algunos datos para crearte una cuenta'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="storeName">Nombre de la tienda *</Label>
-                                    <Input
-                                        id="storeName"
-                                        value={formData.storeName}
-                                        onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
-                                        placeholder="Mi Super Tienda"
-                                        className={errors.storeName ? 'border-red-500' : ''}
-                                    />
-                                    {errors.storeName && <p className="text-xs text-red-500">{errors.storeName}</p>}
-                                </div>
+                                {/* Nombre de tienda - solo para tiendas */}
+                                {accountType === 'tienda' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="storeName">Nombre de la tienda *</Label>
+                                        <Input
+                                            id="storeName"
+                                            value={formData.storeName}
+                                            onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                                            placeholder="Mi Super Tienda"
+                                            className={errors.storeName ? 'border-red-500' : ''}
+                                        />
+                                        {errors.storeName && <p className="text-xs text-red-500">{errors.storeName}</p>}
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <Label htmlFor="ownerName">Tu nombre *</Label>
                                     <Input
@@ -222,32 +317,44 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
                                     </div>
                                     {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">Categoría *</Label>
-                                    <select
-                                        id="category"
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className={`w-full h-10 px-3 rounded-md border bg-white dark:bg-gray-700 dark:border-gray-600 ${errors.category ? 'border-red-500' : 'border-gray-300'}`}
-                                    >
-                                        <option value="">Selecciona una categoría</option>
-                                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                    </select>
-                                    {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Teléfono (opcional)</Label>
-                                    <Input
-                                        id="phone"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        placeholder="+54 11 1234 5678"
-                                    />
-                                </div>
+                                {/* Categoría y teléfono - solo para tiendas */}
+                                {accountType === 'tienda' && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="category">Categoría *</Label>
+                                            <select
+                                                id="category"
+                                                value={formData.category}
+                                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                                className={`w-full h-10 px-3 rounded-md border bg-white dark:bg-gray-700 dark:border-gray-600 ${errors.category ? 'border-red-500' : 'border-gray-300'}`}
+                                            >
+                                                <option value="">Selecciona una categoría</option>
+                                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            </select>
+                                            {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="phone">Teléfono (opcional)</Label>
+                                            <Input
+                                                id="phone"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                placeholder="+54 11 1234 5678"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             <div className="flex justify-between pt-4">
-                                <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-2" />Volver</Button>
-                                <Button onClick={handleNext}>Siguiente<ArrowRight className="h-4 w-4 ml-2" /></Button>
+                                <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="h-4 w-4 mr-2" />Volver</Button>
+                                {accountType === 'tienda' ? (
+                                    <Button onClick={handleNext}>Siguiente<ArrowRight className="h-4 w-4 ml-2" /></Button>
+                                ) : (
+                                    <Button onClick={handleSubmit} disabled={isLoading}>
+                                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                        Crear cuenta
+                                    </Button>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
