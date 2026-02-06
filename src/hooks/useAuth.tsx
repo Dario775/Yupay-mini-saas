@@ -208,7 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Asignar usuario básico INMEDIATAMENTE para evitar stuck state
     setUser(basicUser);
-    console.log('✅ Basic user set immediately:', basicUser.email, 'Role:', basicUser.role);
+    // LIBERAR LA UI INMEDIATAMENTE - las queries de enriquecimiento corren en segundo plano
+    setIsLoading(false);
+    console.log('✅ Basic user set and UI released:', basicUser.email, 'Role:', basicUser.role);
 
     try {
       // Ahora intentamos enriquecer con datos de la BD
@@ -374,10 +376,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('❌ Critical error in loadUserProfile:', error);
       // El usuario básico ya fue asignado, así que la sesión no se pierde
-    } finally {
-      // Garantizamos que isLoading termine en false
-      setIsLoading(false);
     }
+
+    // SIEMPRE terminar loading, pase lo que pase (fuera del try-catch)
+    console.log('🏁 loadUserProfile finished, setting isLoading to false');
+    setIsLoading(false);
   };
 
   const login = useCallback(async (email: string, password: string, role?: UserRole) => {
