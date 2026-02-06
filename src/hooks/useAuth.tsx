@@ -152,7 +152,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
               try {
                 // Pasamos el objeto de usuario directamente para evitar llamadas extras
-                await loadUserProfile(newUserId, newSession.user);
+                // Timeout de 5 segundos para evitar que la UI quede trabada
+                const timeoutPromise = new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('Profile load timeout')), 5000)
+                );
+
+                await Promise.race([
+                  loadUserProfile(newUserId, newSession.user),
+                  timeoutPromise
+                ]);
               } catch (err) {
                 console.error('❌ Error loading profile (session preserved):', err);
                 // Do NOT clear session - the auth is valid, only profile loading failed
