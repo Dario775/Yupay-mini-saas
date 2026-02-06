@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User, UserRole, Subscription, Store, RegisterStoreData } from '@/types';
 import type { Session, AuthError } from '@supabase/supabase-js';
@@ -76,6 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const isDemoMode = !isSupabaseConfigured;
 
+  // Use ref to track user state inside callbacks without dependency issues
+  const userRef = useRef<User | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Cargar sesión existente al iniciar
   useEffect(() => {
     if (isDemoMode) {
@@ -96,9 +103,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             if (newSession?.user) {
+              // CHANGE: Check if it's the same user to avoid infinite loading loops on tab focus
+              if (userRef.current?.id === newSession.user.id) {
+                console.log('🔄 Session refreshed for same user, skipping profile reload.');
+                setIsLoading(false);
+                return;
+              }
+
               setIsLoading(true);
-              await loadUserProfile(newSession.user.id);
-              // loadUserProfile ya setea isLoading = false en su finally
+
+              // Add safety timeout
+              const timer = setTimeout(() => {
+                setIsLoading(prev => {
+                  if (prev) {
+                    console.warn("⚠️ Auth timeout reached, forcing isLoading to false");
+                    return false;
+                  }
+                  return prev;
+                });
+              }, 7000);
+
+              try {
+                await loadUserProfile(newSession.user.id);
+              } finally {
+                clearTimeout(timer);
+                // loadUserProfile already sets isLoading(false)
+              }
             } else {
               setIsLoading(false);
             }
