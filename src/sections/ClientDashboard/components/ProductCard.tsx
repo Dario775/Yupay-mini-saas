@@ -69,11 +69,21 @@ export function ProductCard({
                 className="relative aspect-[4/3] bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer"
                 onClick={() => onView?.(product)}
             >
+                {/* Secondary Image (Hover) */}
+                {product.images?.[1] && (
+                    <img
+                        src={product.images[1]}
+                        alt={`${product.name} alternate`}
+                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100 z-10"
+                    />
+                )}
+
+                {/* Main Image */}
                 {product.images?.[0] ? (
                     <img
                         src={product.images[0]}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-200 dark:text-gray-700">
@@ -83,7 +93,7 @@ export function ProductCard({
 
                 {/* Distance Badge */}
                 {distance !== undefined && (
-                    <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1">
+                    <div className="absolute bottom-2 right-2 z-20 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`}
                     </div>

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Package, Search, Plus, Download, MoreHorizontal, AlertTriangle, Upload } from 'lucide-react';
+import { Package, Search, Plus, Download, MoreHorizontal, AlertTriangle, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,16 @@ import {
     DialogTitle,
     DialogFooter
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { Product } from '@/types';
+import { PRODUCT_CATEGORIES, type CategoryAttribute } from '@/constants/categories';
 import { formatPrice } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -52,10 +61,104 @@ export function InventoryView({
     const [stockProduct, setStockProduct] = useState<Product | null>(null);
     const [stockQuantity, setStockQuantity] = useState('');
 
-    const [newProduct, setNewProduct] = useState({
+    const [newProduct, setNewProduct] = useState<{
+        name: string; description: string; price: string; stock: string; category: string;
+        discount: string; isOnSale: boolean; cost: string; sku: string; minStock: string;
+        images: string[];
+        attributes: Record<string, any>;
+    }>({
         name: '', description: '', price: '', stock: '', category: '',
-        discount: '', isOnSale: false, cost: '', sku: '', minStock: ''
+        discount: '', isOnSale: false, cost: '', sku: '', minStock: '',
+        images: [] as string[],
+        attributes: {}
     });
+
+    const processImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject('No canvas context');
+                        return;
+                    }
+
+                    // Standardize to square 800x800
+                    const size = 800;
+                    canvas.width = size;
+                    canvas.height = size;
+
+                    // Calculate cover logic
+                    const scale = Math.max(size / img.width, size / img.height);
+                    const x = (size - img.width * scale) / 2;
+                    const y = (size - img.height * scale) / 2;
+
+                    ctx.fillStyle = '#FFFFFF'; // White background just in case
+                    ctx.fillRect(0, 0, size, size);
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEditing: boolean) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const currentImages = isEditing ? editingProduct?.images || [] : newProduct.images;
+
+        if (currentImages.length >= 2) {
+            toast.error('Máximo 2 imágenes permitidas');
+            return;
+        }
+
+        const remainingSlots = 2 - currentImages.length;
+        const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+        try {
+            const processedImages = await Promise.all(filesToProcess.map(processImage));
+
+            if (isEditing && editingProduct) {
+                setEditingProduct({
+                    ...editingProduct,
+                    images: [...(editingProduct.images || []), ...processedImages]
+                });
+            } else {
+                setNewProduct(prev => ({
+                    ...prev,
+                    images: [...prev.images, ...processedImages]
+                }));
+            }
+            toast.success(`${processedImages.length} imagen(es) agregada(s)`);
+        } catch (error) {
+            console.error('Error processing image:', error);
+            toast.error('Error al procesar la imagen');
+        }
+
+        // Reset input
+        e.target.value = '';
+    };
+
+    const removeImage = (index: number, isEditing: boolean) => {
+        if (isEditing && editingProduct) {
+            const newImages = [...(editingProduct.images || [])];
+            newImages.splice(index, 1);
+            setEditingProduct({ ...editingProduct, images: newImages });
+        } else {
+            const newImages = [...newProduct.images];
+            newImages.splice(index, 1);
+            setNewProduct(prev => ({ ...prev, images: newImages }));
+        }
+    };
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,25 +176,28 @@ export function InventoryView({
         const finalPrice = discount > 0 ? price * (1 - discount / 100) : price;
 
         addProduct({
-            storeId: 'store1', // Should ideally come from context or props
+            storeId: '', // Handled by useStoreData hook
             name: newProduct.name,
             description: newProduct.description,
             price: finalPrice,
             originalPrice: originalPrice,
             stock: parseInt(newProduct.stock),
             category: newProduct.category || 'General',
-            images: [],
+            images: newProduct.images,
             isActive: true,
             discount: discount || undefined,
             isOnSale: newProduct.isOnSale,
             cost: newProduct.cost ? parseFloat(newProduct.cost) : undefined,
             sku: newProduct.sku || undefined,
             minStock: newProduct.minStock ? parseInt(newProduct.minStock) : undefined,
+            attributes: newProduct.attributes
         });
         toast.success('Producto agregado exitosamente');
         setNewProduct({
             name: '', description: '', price: '', stock: '', category: '',
-            discount: '', isOnSale: false, cost: '', sku: '', minStock: ''
+            discount: '', isOnSale: false, cost: '', sku: '', minStock: '',
+            images: [],
+            attributes: {}
         });
         setIsAddProductOpen(false);
     };
@@ -115,6 +221,59 @@ export function InventoryView({
     const handleToggleActive = (product: Product) => {
         updateProduct(product.id, { isActive: !product.isActive });
         toast.success(product.isActive ? 'Producto desactivado' : 'Producto activado');
+    };
+
+    const renderAttributeInput = (attr: CategoryAttribute, values: Record<string, any>, setValues: (v: Record<string, any>) => void) => {
+        const value = values[attr.id] || '';
+
+        const handleChange = (val: any) => {
+            setValues({ ...values, [attr.id]: val });
+        };
+
+        if (attr.type === 'select') {
+            return (
+                <div key={attr.id} className="space-y-2">
+                    <Label>{attr.name} {attr.required && '*'}</Label>
+                    <Select value={value} onValueChange={handleChange}>
+                        <SelectTrigger className="dark:bg-gray-700">
+                            <SelectValue placeholder={attr.placeholder || "Seleccionar..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(attr.options as string[])?.map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            );
+        }
+
+        if (attr.type === 'boolean') {
+            return (
+                <div key={attr.id} className="flex items-center gap-2 pt-8">
+                    <Switch checked={value === true} onCheckedChange={handleChange} />
+                    <Label>{attr.name}</Label>
+                </div>
+            );
+        }
+
+        return (
+            <div key={attr.id} className="space-y-2">
+                <Label>{attr.name} {attr.required && '*'}</Label>
+                <Input
+                    type={attr.type === 'number' ? 'number' : 'text'}
+                    value={value}
+                    onChange={(e) => handleChange(e.target.value)}
+                    placeholder={attr.placeholder}
+                    className="dark:bg-gray-700"
+                />
+            </div>
+        );
+    };
+
+    const getCategoryAttributes = (categoryId: string) => {
+        const category = PRODUCT_CATEGORIES.find(c => c.id === categoryId);
+        return category?.attributes || [];
     };
 
     return (
@@ -166,7 +325,9 @@ export function InventoryView({
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{product.category}</td>
+                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                                        {PRODUCT_CATEGORIES.find(c => c.id === product.category)?.name || product.category}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="font-bold text-gray-900 dark:text-white">${product.price.toFixed(2)}</span>
@@ -243,7 +404,7 @@ export function InventoryView({
 
             {/* Add Product Dialog */}
             <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-                <DialogContent className="max-w-lg dark:bg-gray-800">
+                <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-800">
                     <DialogHeader>
                         <DialogTitle className="dark:text-white">Agregar Nuevo Producto</DialogTitle>
                         <DialogDescription>Completa la información del producto</DialogDescription>
@@ -261,18 +422,68 @@ export function InventoryView({
                             <div className="space-y-2"><Label>SKU / Código</Label><Input value={newProduct.sku} onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })} placeholder="ABC-123" className="dark:bg-gray-700" /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>Categoría</Label><Input value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })} placeholder="Categoría" className="dark:bg-gray-700" /></div>
+                            <div className="space-y-2">
+                                <Label>Categoría</Label>
+                                <Select value={newProduct.category} onValueChange={(val) => setNewProduct({ ...newProduct, category: val, attributes: {} })}>
+                                    <SelectTrigger className="dark:bg-gray-700">
+                                        <SelectValue placeholder="Seleccionar..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PRODUCT_CATEGORIES.map(cat => (
+                                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="space-y-2"><Label>% Descuento</Label><Input type="number" value={newProduct.discount} onChange={(e) => setNewProduct({ ...newProduct, discount: e.target.value })} placeholder="0" className="dark:bg-gray-700" /></div>
                         </div>
+
+                        {/* Atributos Dinámicos */}
+                        {newProduct.category && getCategoryAttributes(newProduct.category).length > 0 && (
+                            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border dark:border-gray-700 space-y-3">
+                                <h4 className="text-sm font-medium dark:text-gray-300">Detalles de {PRODUCT_CATEGORIES.find(c => c.id === newProduct.category)?.name}</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {getCategoryAttributes(newProduct.category).map(attr =>
+                                        renderAttributeInput(attr, newProduct.attributes, (newAttrs) => setNewProduct({ ...newProduct, attributes: newAttrs }))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 pt-2">
                             <Switch checked={newProduct.isOnSale} onCheckedChange={(checked) => setNewProduct({ ...newProduct, isOnSale: checked })} />
                             <Label>Marcar como Oferta Especial</Label>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Imágenes</Label>
-                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                                <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500 dark:text-gray-400">Subir imágenes</p>
+                        <div className="space-y-3">
+                            <Label>Imágenes del Producto (Máx. 2)</Label>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                {newProduct.images.map((img, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border dark:border-gray-700 group">
+                                        <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                        <button
+                                            onClick={() => removeImage(idx, false)}
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {newProduct.images.length < 2 && (
+                                    <div className="aspect-square">
+                                        <label className="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-violet-500 dark:hover:border-violet-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center px-2">Click para subir</p>
+                                            </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, false)} />
+                                        </label>
+                                    </div>
+                                )}
                             </div>
+                            <p className="text-[10px] text-gray-400">
+                                * Las imágenes se recortarán automáticamente a formato cuadrado (1:1).
+                            </p>
                         </div>
                     </div>
                     <DialogFooter>
@@ -284,7 +495,7 @@ export function InventoryView({
 
             {/* Edit Product Dialog */}
             <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
-                <DialogContent className="max-w-lg dark:bg-gray-800">
+                <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-800">
                     <DialogHeader><DialogTitle className="dark:text-white">Editar Producto</DialogTitle></DialogHeader>
                     {editingProduct && (
                         <div className="space-y-4">
@@ -300,12 +511,60 @@ export function InventoryView({
                                 <div className="space-y-2"><Label>SKU</Label><Input value={editingProduct.sku || ''} onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })} className="dark:bg-gray-700" /></div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label>Categoría</Label><Input value={editingProduct.category} onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })} className="dark:bg-gray-700" /></div>
+                                <div className="space-y-2">
+                                    <Label>Categoría</Label>
+                                    <Select value={editingProduct.category} onValueChange={(val) => setEditingProduct({ ...editingProduct, category: val, attributes: {} })}>
+                                        <SelectTrigger className="dark:bg-gray-700">
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PRODUCT_CATEGORIES.map(cat => (
+                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div className="space-y-2"><Label>% Descuento</Label><Input type="number" value={editingProduct.discount || ''} onChange={(e) => setEditingProduct({ ...editingProduct, discount: parseFloat(e.target.value) })} className="dark:bg-gray-700" /></div>
                             </div>
-                            <div className="flex items-center gap-2 pt-2">
-                                <Switch checked={editingProduct.isOnSale || false} onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, isOnSale: checked })} />
-                                <Label>Marcar como Oferta Especial</Label>
+
+                            {/* Atributos Dinámicos Edición */}
+                            {editingProduct.category && getCategoryAttributes(editingProduct.category).length > 0 && (
+                                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border dark:border-gray-700 space-y-3">
+                                    <h4 className="text-sm font-medium dark:text-gray-300">Detalles de {PRODUCT_CATEGORIES.find(c => c.id === editingProduct.category)?.name}</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {getCategoryAttributes(editingProduct.category).map(attr =>
+                                            renderAttributeInput(attr, editingProduct.attributes || {}, (newAttrs) => setEditingProduct({ ...editingProduct, attributes: newAttrs }))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="space-y-3 pt-2 border-t dark:border-gray-700">
+                                <Label>Imágenes (Máx. 2)</Label>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {(editingProduct.images || []).map((img, idx) => (
+                                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border dark:border-gray-700 group">
+                                            <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => removeImage(idx, true)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    {(!editingProduct.images || editingProduct.images.length < 2) && (
+                                        <div className="aspect-square">
+                                            <label className="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-violet-500 dark:hover:border-violet-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center px-2">Subir</p>
+                                                </div>
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, true)} />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -333,18 +592,137 @@ export function InventoryView({
 
             {/* Product Detail Dialog */}
             <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-                <DialogContent className="max-w-lg dark:bg-gray-800">
-                    <DialogHeader><DialogTitle className="dark:text-white">{selectedProduct?.name}</DialogTitle><DialogDescription>{selectedProduct?.description}</DialogDescription></DialogHeader>
+                <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 border-0 rounded-2xl p-0 gap-0">
                     {selectedProduct && (
-                        <div className="space-y-4">
-                            <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 rounded-lg flex items-center justify-center text-6xl font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                                {selectedProduct.images?.[0] ? <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full h-full object-cover" /> : selectedProduct.name.charAt(0)}
+                        <div className="flex flex-col md:flex-row h-full">
+                            {/* Left Column: Images */}
+                            <div className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 p-6 flex flex-col items-center justify-center relative">
+                                <div className="aspect-square w-full max-w-[300px] mb-4 bg-white dark:bg-gray-700 rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
+                                    {selectedProduct.images?.[0] ? (
+                                        <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full h-full object-contain" />
+                                    ) : (
+                                        <span className="text-4xl font-bold text-gray-300">{selectedProduct.name.charAt(0)}</span>
+                                    )}
+                                </div>
+                                {/* Thumbnails */}
+                                {selectedProduct.images && selectedProduct.images.length > 1 && (
+                                    <div className="flex gap-2 justify-center w-full">
+                                        {selectedProduct.images.map((img, idx) => (
+                                            <div key={idx} className="w-16 h-16 border-2 border-transparent hover:border-violet-500 rounded-lg overflow-hidden cursor-pointer transition-all">
+                                                <img src={img} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="text-sm text-gray-500 dark:text-gray-400">Categoría</label><p className="font-medium dark:text-white">{selectedProduct.category}</p></div>
-                                <div><label className="text-sm text-gray-500 dark:text-gray-400">Precio</label><p className="font-medium text-xl dark:text-white">{formatPrice(selectedProduct.price)}</p></div>
-                                <div><label className="text-sm text-gray-500 dark:text-gray-400">Stock</label><p className="font-medium dark:text-white">{selectedProduct.stock} unidades</p></div>
-                                <div><label className="text-sm text-gray-500 dark:text-gray-400">Estado</label><p><Badge variant={selectedProduct.isActive ? 'default' : 'secondary'}>{selectedProduct.isActive ? 'Activo' : 'Inactivo'}</Badge></p></div>
+
+                            {/* Right Column: Details */}
+                            <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <Badge variant="secondary" className="mb-2 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200">
+                                            {PRODUCT_CATEGORIES.find(c => c.id === selectedProduct.category)?.name || selectedProduct.category}
+                                        </Badge>
+                                        <DialogTitle className="text-2xl font-bold dark:text-white leading-tight mb-1">
+                                            {selectedProduct.name}
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-500 font-mono">{selectedProduct.sku || 'Sin SKU'}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(null)} className="md:hidden">
+                                        <X className="h-5 w-5" />
+                                    </Button>
+                                </div>
+
+                                <ScrollArea className="flex-1 -mr-4 pr-4">
+                                    <div className="space-y-6">
+                                        {/* Price & Stock */}
+                                        <div className="flex items-end justify-between border-b dark:border-gray-800 pb-4">
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-500 uppercase">Precio</p>
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                                                        {formatPrice(selectedProduct.price)}
+                                                    </span>
+                                                    {selectedProduct.discount && (
+                                                        <Badge variant="destructive" className="ml-1">-{selectedProduct.discount}%</Badge>
+                                                    )}
+                                                </div>
+                                                {selectedProduct.originalPrice && (
+                                                    <p className="text-sm text-gray-400 line-through">
+                                                        {formatPrice(selectedProduct.originalPrice)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Stock</p>
+                                                <Badge
+                                                    variant={selectedProduct.stock <= (selectedProduct.minStock || 5) ? "destructive" : "outline"}
+                                                    className="text-base px-3 py-1"
+                                                >
+                                                    {selectedProduct.stock} uds.
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        {/* Cost (Admin Only) */}
+                                        {selectedProduct.cost && (
+                                            <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center text-sm">
+                                                <span className="text-gray-500">Costo Unitario:</span>
+                                                <span className="font-mono font-medium dark:text-gray-300">{formatPrice(selectedProduct.cost)}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Description */}
+                                        {selectedProduct.description && (
+                                            <div>
+                                                <h4 className="text-sm font-semibold mb-2 dark:text-gray-200">Descripción</h4>
+                                                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed whitespace-pre-line">
+                                                    {selectedProduct.description}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Specifications */}
+                                        {selectedProduct.attributes && Object.keys(selectedProduct.attributes).length > 0 && (
+                                            <div>
+                                                <h4 className="text-sm font-semibold mb-3 dark:text-gray-200">Especificaciones</h4>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {Object.entries(selectedProduct.attributes).map(([key, value]) => {
+                                                        const category = PRODUCT_CATEGORIES.find(c => c.id === selectedProduct.category);
+                                                        const attrName = category?.attributes.find(a => a.id === key)?.name || key;
+                                                        // Safe check for value
+                                                        const displayValue = value === true ? 'Sí' : value === false ? 'No' : String(value);
+
+                                                        return (
+                                                            <div key={key} className="bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg text-sm">
+                                                                <span className="block text-xs text-gray-500 mb-0.5">{attrName}</span>
+                                                                <span className="font-medium dark:text-gray-200 truncate block" title={displayValue}>
+                                                                    {displayValue}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+
+                                <div className="mt-6 pt-4 border-t dark:border-gray-800 flex gap-3">
+                                    <Button variant="outline" className="flex-1" onClick={() => setSelectedProduct(null)}>
+                                        Cerrar
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
+                                        onClick={() => {
+                                            const prod = selectedProduct;
+                                            setSelectedProduct(null);
+                                            setEditingProduct(prod);
+                                        }}
+                                    >
+                                        Editar Producto
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}

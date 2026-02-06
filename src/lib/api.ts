@@ -129,5 +129,54 @@ export const storeApi = {
             .single();
         if (error) throw error;
         return data;
+    },
+
+    async updateProduct(id: string, updates: any) {
+        // Map camelCase to snake_case if necessary, currently assumed direct mapping or matching column names
+        // Ideally we should map fields like storeId -> store_id if passed in updates
+        const dbUpdates: any = { ...updates };
+        if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+        if (updates.isOnSale !== undefined) dbUpdates.is_on_sale = updates.isOnSale;
+        if (updates.originalPrice !== undefined) dbUpdates.original_price = updates.originalPrice;
+        if (updates.saleEndDate !== undefined) dbUpdates.sale_end_date = updates.saleEndDate;
+        if (updates.minStock !== undefined) dbUpdates.min_stock = updates.minStock;
+
+        const { error } = await supabase
+            .from('products')
+            .update(dbUpdates)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async deleteProduct(id: string) {
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    }
+};
+
+/**
+ * API for Client Data
+ */
+export const clientApi = {
+    async getAllProducts() {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    async getAllStores() {
+        const { data, error } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('is_active', true);
+        if (error) throw error;
+        return data;
     }
 };

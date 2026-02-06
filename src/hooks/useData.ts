@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useLocalStorage } from './useLocalStorage';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { adminApi, storeApi } from '@/lib/api';
+import { adminApi, storeApi, clientApi } from '@/lib/api';
 import type {
   Subscription,
   Store,
@@ -41,6 +42,77 @@ const DEMO_PRODUCTS: Product[] = [];
 
 // Datos de demostración - Órdenes (vacío para producción)
 const DEMO_ORDERS: Order[] = [];
+
+// Client Demo Data
+const DEMO_CLIENT_PRODUCTS: Product[] = [
+  {
+    id: 'p1',
+    storeId: 'store1',
+    name: 'Auriculares Pro Wireless',
+    description: 'Auriculares con cancelación de ruido de alta fidelidad.',
+    price: 15000,
+    stock: 15,
+    category: 'Audio',
+    images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
+    isActive: true,
+    createdAt: new Date()
+  },
+  {
+    id: 'p2',
+    storeId: 'store1',
+    name: 'Smartwatch Serie X',
+    description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
+    price: 25000,
+    stock: 8,
+    category: 'Electrónica',
+    images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
+    isActive: true,
+    createdAt: new Date()
+  },
+  {
+    id: 'p3',
+    storeId: 'store2',
+    name: 'Cámara Reflex Nikon',
+    description: 'Cámara profesional para fotografía de alta calidad.',
+    price: 85000,
+    stock: 3,
+    category: 'Fotografía',
+    images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80'],
+    isActive: true,
+    createdAt: new Date()
+  }
+];
+
+const DEMO_CLIENT_STORES: Store[] = [
+  {
+    id: 'store1',
+    ownerId: 'u1',
+    name: 'Mi Tienda Tech',
+    description: 'La mejor tecnología a tu alcance.',
+    category: 'Electrónica',
+    address: 'Av. Corrientes 1234, CABA',
+    phone: '1122334455',
+    email: 'tienda@demo.com',
+    isActive: true,
+    rating: 4.8,
+    createdAt: new Date(),
+    location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
+  },
+  {
+    id: 'store2',
+    ownerId: 'u2',
+    name: 'Foto Center',
+    description: 'Expertos en fotografía y video.',
+    category: 'Fotografía',
+    address: 'Florida 500, CABA',
+    phone: '1199887766',
+    email: 'foto@demo.com',
+    isActive: true,
+    rating: 4.5,
+    createdAt: new Date(),
+    location: { lat: -34.6015, lng: -58.3750, address: 'Florida 500, CABA', locality: 'CABA' }
+  }
+];
 
 // Hook para Admin - Mejorado con métricas freemium
 export function useAdminData() {
@@ -274,75 +346,49 @@ export function useAdminData() {
 export function useClientData(userId: string) {
   // Todos los usuarios empiezan sin órdenes (datos reales vendrán de Supabase)
   const [orders, setOrders] = useState<Order[]>([]);
-  const [products] = useState<Product[]>([
-    {
-      id: 'p1',
-      storeId: 'store1',
-      name: 'Auriculares Pro Wireless',
-      description: 'Auriculares con cancelación de ruido de alta fidelidad.',
-      price: 15000,
-      stock: 15,
-      category: 'Audio',
-      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'],
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 'p2',
-      storeId: 'store1',
-      name: 'Smartwatch Serie X',
-      description: 'Reloj inteligente con monitor de ritmo cardíaco y GPS.',
-      price: 25000,
-      stock: 8,
-      category: 'Electrónica',
-      images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80'],
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 'p3',
-      storeId: 'store2',
-      name: 'Cámara Reflex Nikon',
-      description: 'Cámara profesional para fotografía de alta calidad.',
-      price: 85000,
-      stock: 3,
-      category: 'Fotografía',
-      images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80'],
-      isActive: true,
-      createdAt: new Date()
-    }
-  ]);
+  const [products, setProducts] = useState<Product[]>(isSupabaseConfigured ? [] : DEMO_CLIENT_PRODUCTS);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [stores] = useState<Store[]>([
-    {
-      id: 'store1',
-      ownerId: 'u1',
-      name: 'Mi Tienda Tech',
-      description: 'La mejor tecnología a tu alcance.',
-      category: 'Electrónica',
-      address: 'Av. Corrientes 1234, CABA',
-      phone: '1122334455',
-      email: 'tienda@demo.com',
-      isActive: true,
-      rating: 4.8,
-      createdAt: new Date(),
-      location: { lat: -34.6037, lng: -58.3816, address: 'Av. Corrientes 1234, CABA', locality: 'CABA' }
-    },
-    {
-      id: 'store2',
-      ownerId: 'u2',
-      name: 'Foto Center',
-      description: 'Expertos en fotografía y video.',
-      category: 'Fotografía',
-      address: 'Florida 500, CABA',
-      phone: '1199887766',
-      email: 'foto@demo.com',
-      isActive: true,
-      rating: 4.5,
-      createdAt: new Date(),
-      location: { lat: -34.6015, lng: -58.3750, address: 'Florida 500, CABA', locality: 'CABA' }
-    }
-  ]);
+  const [stores, setStores] = useState<Store[]>(isSupabaseConfigured ? [] : DEMO_CLIENT_STORES);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const fetchClientData = async () => {
+      try {
+        const [dbProducts, dbStores] = await Promise.all([
+          clientApi.getAllProducts(),
+          clientApi.getAllStores()
+        ]);
+
+        if (dbProducts) {
+          setProducts(dbProducts.map((p: any) => ({
+            ...p,
+            storeId: p.store_id,
+            isActive: p.is_active,
+            createdAt: new Date(p.created_at),
+            isOnSale: p.is_on_sale,
+            originalPrice: p.original_price,
+            saleEndDate: p.sale_end_date ? new Date(p.sale_end_date) : undefined,
+            minStock: p.min_stock
+          })));
+        }
+
+        if (dbStores) {
+          setStores(dbStores.map((s: any) => ({
+            ...s,
+            ownerId: s.owner_id,
+            isActive: s.is_active,
+            createdAt: new Date(s.created_at)
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching client data:', error);
+        toast.error('Error al cargar datos del cliente.');
+      }
+    };
+
+    fetchClientData();
+  }, [userId]);
 
   const [flashOffers, setFlashOffers] = useState<FlashOffer[]>([
     {
@@ -531,19 +577,78 @@ export function useStoreData(storeId: string) {
   const pendingOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'procesando').length;
   const lowStockProducts = products.filter(p => p.stock < 10).length;
 
-  const addProduct = useCallback((product: Omit<Product, 'id' | 'createdAt'>) => {
+  const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt'>) => {
     if (!canAddProduct) return null;
-    const newProduct: Product = { ...product, id: `prod${Date.now()}`, createdAt: new Date() };
-    setProducts(prev => [newProduct, ...prev]);
-    return newProduct;
-  }, [canAddProduct]);
 
-  const updateProduct = useCallback((id: string, updates: Partial<Product>) => {
+    // 1. Optimistic update
+    const tempId = `prod${Date.now()}`;
+    const newProduct: Product = { ...product, id: tempId, createdAt: new Date() };
+    setProducts(prev => [newProduct, ...prev]);
+
+    // 2. Persist to Supabase
+    if (isSupabaseConfigured) {
+      if (!storeId) {
+        console.error('❌ addProduct failed: No storeId provided');
+        toast.error('Error crítico: No se identificó la tienda. Recarga la página.');
+        return;
+      }
+
+      try {
+        const dbProduct = await storeApi.addProduct({
+          store_id: storeId,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          stock: product.stock,
+          category: product.category,
+          images: product.images,
+          is_on_sale: product.isOnSale,
+          cost: product.cost,
+          sku: product.sku,
+          min_stock: product.minStock
+          // attributes: product.attributes // Column does not exist in DB yet
+        });
+
+        // Update temp ID with real ID
+        if (dbProduct) {
+          setProducts(prev => prev.map(p => p.id === tempId ? {
+            ...p,
+            id: dbProduct.id,
+            createdAt: new Date(dbProduct.created_at)
+          } : p));
+          return { ...newProduct, id: dbProduct.id };
+        }
+      } catch (err: any) {
+        console.error('Error adding product to Supabase:', err);
+        toast.error(`Error: ${err.message || 'Error al guardar el producto'}`);
+        // Rollback optimistic update? Or show error
+      }
+    }
+    return newProduct;
+  }, [canAddProduct, storeId]);
+
+  const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.updateProduct(id, updates);
+      } catch (err) {
+        console.error('Error updating product in Supabase:', err);
+      }
+    }
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
+  const deleteProduct = useCallback(async (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
+
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.deleteProduct(id);
+      } catch (err) {
+        console.error('Error deleting product in Supabase:', err);
+      }
+    }
   }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {

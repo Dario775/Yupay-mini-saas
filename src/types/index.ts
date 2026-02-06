@@ -175,6 +175,8 @@ export interface Product {
   cost?: number;               // Costo del producto (para calcular margen)
   sku?: string;                // Código de producto
   minStock?: number;           // Stock mínimo para alertas
+  // Atributos dinámicos por categoría
+  attributes?: Record<string, any>;
 }
 
 // Órdenes/Compras

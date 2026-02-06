@@ -36,15 +36,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useClientData } from '@/hooks/useData';
 import { ShopView } from './ClientDashboard/ShopView';
@@ -52,6 +43,7 @@ import { CartDrawer } from './ClientDashboard/CartDrawer';
 import { OrdersView } from './ClientDashboard/OrdersView';
 import { FavoritesView } from './ClientDashboard/FavoritesView';
 import { ProfileView } from './ClientDashboard/ProfileView';
+import { ProductDetailModal } from './ClientDashboard/components/ProductDetailModal';
 
 import { useAuth } from '@/hooks/useAuth';
 import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
@@ -125,9 +117,9 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
 
-      // Filtro por ubicación
-      let matchesLocation = true;
-      if (userLocation) {
+      // Filtro por ubicación (DESACTIVADO TEMPORALMENTE PARA PRUEBAS)
+      // let matchesLocation = true;
+      /* if (userLocation) {
         const productStore = stores.find(s => s.id === product.storeId);
         if (productStore?.location) {
           if (searchRadius === 0) {
@@ -141,7 +133,8 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
           // Tiendas sin ubicación no se muestran si hay filtro activo
           matchesLocation = false;
         }
-      }
+      } */
+      const matchesLocation = true;
 
       return matchesSearch && matchesCategory && matchesLocation;
     })
@@ -326,81 +319,14 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
       />
 
       {/* Product Detail Dialog */}
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent className="max-w-lg dark:bg-gray-900 border-0 rounded-3xl overflow-hidden p-0">
-          {selectedProduct && (() => {
-            const productStore = stores.find(s => s.id === selectedProduct.storeId);
-            const storeShipping = productStore?.shippingMethods?.filter(m => m.isActive) || [];
-            return (
-              <div className="space-y-0">
-                <div className="relative aspect-video bg-gray-50 dark:bg-gray-800 overflow-hidden">
-                  <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/20 backdrop-blur-md text-white">
-                    <X className="h-4 w-4" />
-                  </button>
-                  {selectedProduct.images?.[0] ? <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-300">{selectedProduct.name[0]}</div>}
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <div>
-                    <Badge className="bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-0 text-[10px] uppercase font-bold mb-2">
-                      {selectedProduct.category}
-                    </Badge>
-                    <h3 className="text-xl font-bold dark:text-white leading-tight">{selectedProduct.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">{selectedProduct.description}</p>
-                  </div>
-
-                  <Separator className="dark:border-gray-800" />
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Precio</p>
-                      <p className="text-2xl font-bold text-violet-600">${selectedProduct.price.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Stock</p>
-                      <p className={`text-sm font-bold ${selectedProduct.stock > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} unidades` : 'Agotado'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button
-                      onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
-                      disabled={selectedProduct.stock === 0}
-                      className="flex-1 h-12 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl"
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Agregar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 px-4 border-green-500 text-green-600 hover:bg-green-50 rounded-2xl"
-                      onClick={() => {
-                        const store = stores.find(s => s.id === selectedProduct.storeId);
-                        if (store?.phone) {
-                          const msg = `Hola ${store.name}, estoy interesado en *${selectedProduct.name}*. ¿Tienen stock?`;
-                          window.open(generateWhatsAppLink(store.phone, msg), '_blank');
-                        }
-                      }}
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleToggleFavorite(selectedProduct.id)}
-                      className="h-12 w-12 rounded-2xl border-gray-100 dark:border-gray-800"
-                    >
-                      <Heart className={`h-5 w-5 ${isFavorite(selectedProduct.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
+      <ProductDetailModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        addToCart={addToCart}
+        toggleFavorite={handleToggleFavorite}
+        isFavorite={selectedProduct ? isFavorite(selectedProduct.id) : false}
+        stores={stores}
+      />
 
     </div>
   );

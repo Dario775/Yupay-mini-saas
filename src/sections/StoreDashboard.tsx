@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { useStoreData } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import type { OrderStatus } from '@/types';
 import { StatCard } from '@/components/StatCard';
 import { InventoryView } from './StoreDashboard/InventoryView';
@@ -25,10 +26,37 @@ import { SalesView } from './StoreDashboard/SalesView';
 import { SettingsView } from './StoreDashboard/SettingsView';
 
 export default function StoreDashboard() {
-  const { user, store: authStore } = useAuth();
+  const { user, store: authStore, isLoading } = useAuth();
+
+  // Show loading state while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-gray-500 font-medium">Cargando tu tienda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay tienda, mostrar error y opción de recargar
+  if (!authStore && !isLoading && isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No se encontró tu tienda</h1>
+        <p className="text-gray-500 text-center mb-6 max-w-md">
+          Parece que tu usuario no tiene una tienda asociada o hubo un error al cargarla.
+        </p>
+        <Button onClick={() => window.location.reload()}>Recargar página</Button>
+        <p className="text-xs text-gray-400 mt-8">ID de Usuario: {user?.id}</p>
+      </div>
+    );
+  }
 
   // Usar el ID de la tienda del usuario autenticado
-  const storeId = authStore?.id || 'demo-store';
+  const storeId = authStore?.id || '';
 
   const {
     stats, products, orders, lowStockProducts, subscription,
