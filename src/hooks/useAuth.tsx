@@ -81,6 +81,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userRef = useRef<User | null>(null);
   const loadingRef = useRef(false);
 
+  const clearAuthSession = useCallback(() => {
+    console.log('🧹 Clearing auth session and localStorage...');
+    // Limpiar claves de Supabase y Yupay
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('sb-') || key.includes('yupay-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    setUser(null);
+    setStore(null);
+    setSubscription(null);
+    setSession(null);
+  }, []);
+
   useEffect(() => {
     userRef.current = user;
   }, [user]);
@@ -635,23 +649,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isDemoMode]);
 
   const logout = useCallback(async () => {
-    // 1. Limpiar estado local PRIMERO
-    setUser(null);
-    setStore(null);
-    setSubscription(null);
-    setSession(null);
-    setIsLoading(false);
-
-    // 2. Hacer signOut de Supabase (rápido, no debería demorar)
+    setIsLoading(true);
     try {
-      await supabase.auth.signOut();
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+      clearAuthSession();
+      window.location.href = '/';
     } catch (err) {
       console.error('Logout error:', err);
+      // Fallback: al menos limpiar el estado local y redirigir
+      clearAuthSession();
+      window.location.href = '/';
+    } finally {
+      setIsLoading(false);
     }
-
-    // 3. Redirigir después del signOut
-    window.location.href = '/';
-  }, []);
+  }, [clearAuthSession]);
 
   const value = {
     user,
@@ -662,6 +675,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loginWithGoogle,
     logout,
     register,
+    clearAuthSession,
     isLoading,
     authError,
     isDemoMode,
