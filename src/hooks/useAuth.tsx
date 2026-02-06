@@ -140,22 +140,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setIsLoading(true);
 
               // Add safety timeout (Stuck Detector)
+              // Only clear session if we're truly stuck with no user loaded
               const timer = setTimeout(() => {
-                if (loadingRef.current) {
-                  console.warn("⚠️ Auth loading STUCK (8s). Clearing local storage for recovery...");
+                if (loadingRef.current && !userRef.current) {
+                  console.warn("⚠️ Auth loading STUCK (15s) with no user. Releasing UI...");
                   loadingRef.current = false;
-                  clearAuthSession();
                   setIsLoading(false);
+                  // Do NOT clear session here - let user retry manually
                 }
-              }, 8000);
+              }, 15000);
 
               try {
                 // Pasamos el objeto de usuario directamente para evitar llamadas extras
                 await loadUserProfile(newUserId, newSession.user);
               } catch (err) {
-                console.error('❌ Critical error loading profile:', err);
-                // Si falla críticamente, limpiamos para evitar bucles infinitos
-                clearAuthSession();
+                console.error('❌ Error loading profile (session preserved):', err);
+                // Do NOT clear session - the auth is valid, only profile loading failed
+                // User can still use the app, we just don't have full profile data
               } finally {
                 clearTimeout(timer);
                 loadingRef.current = false;
