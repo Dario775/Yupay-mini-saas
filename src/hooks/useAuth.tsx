@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string, role?: UserRole) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: RegisterStoreData) => Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }>;
+  register: (data: RegisterStoreData, roleOverride?: 'tienda' | 'cliente') => Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }>;
   isLoading: boolean;
   authError: string | null;
   isDemoMode: boolean;
