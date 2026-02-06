@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
     Settings, Truck, CreditCard, MapPin,
     Loader2, CheckCircle, Plus, MoreHorizontal,
-    Wallet, Banknote, Home
+    Wallet, Banknote, Home, User
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ import LocationMap from '@/components/ui/LocationMap';
 import { formatPrice } from '@/utils/format';
 import { searchAddresses, getCurrentPosition, reverseGeocode } from '@/lib/geo';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 import type { Store, ShippingMethod, PaymentMethod, GeoLocation } from '@/types';
 
 interface SettingsViewProps {
@@ -58,7 +60,15 @@ export function SettingsView({
     updatePaymentMethod,
     deletePaymentMethod
 }: SettingsViewProps) {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('general');
+
+    // Profile State
+    const [profileData, setProfileData] = useState({
+        name: user?.name || '',
+        phone: user?.phone || '',
+        email: user?.email || '',
+    });
 
     // Location State
     const [locationQuery, setLocationQuery] = useState(store?.address || '');
@@ -133,13 +143,79 @@ export function SettingsView({
         }
     };
 
+    const handleUpdateProfile = async () => {
+        if (!user) return;
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    name: profileData.name,
+                    phone: profileData.phone,
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            toast.success('Perfil actualizado correctamente');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            toast.error('Error al actualizar el perfil');
+        }
+    };
+
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white dark:bg-gray-800 p-1 rounded-lg border dark:border-gray-800">
+                <TabsTrigger value="profile" className="text-xs"><User className="h-3 w-3 mr-1.5" />Perfil</TabsTrigger>
                 <TabsTrigger value="general" className="text-xs"><Settings className="h-3 w-3 mr-1.5" />General</TabsTrigger>
                 <TabsTrigger value="shipping" className="text-xs"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
                 <TabsTrigger value="payments" className="text-xs"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
             </TabsList>
+
+
+            <TabsContent value="profile">
+                <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                    <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
+                        <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
+                            <User className="h-4 w-4 text-violet-500" />
+                            Perfil del Dueño
+                        </CardTitle>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Gestiona tus datos personales</p>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Nombre Completo</Label>
+                                <Input
+                                    value={profileData.name}
+                                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                    className="dark:bg-gray-800"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input
+                                    value={profileData.email}
+                                    disabled
+                                    className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-gray-500"
+                                />
+                                <p className="text-[10px] text-gray-500">El email no se puede cambiar por seguridad.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Teléfono</Label>
+                                <Input
+                                    value={profileData.phone}
+                                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                    className="dark:bg-gray-800"
+                                    placeholder="+54 11 ..."
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button onClick={handleUpdateProfile} className="bg-violet-600 hover:bg-violet-700 text-white">Guardar Cambios</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
             <TabsContent value="general">
                 <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">

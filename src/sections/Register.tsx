@@ -101,11 +101,24 @@ export default function Register({ onBack, onSuccess }: RegisterProps) {
 
     const handleRegister = async () => {
         try {
-            await register(formData);
+            const result = await register(formData);
+
+            if (result.emailConfirmationRequired) {
+                toast.success('¡Registro exitoso! Por favor revisa tu email para confirmar tu cuenta.', {
+                    duration: 6000,
+                    icon: <Check className="h-5 w-5 text-green-500" />
+                });
+                // Podríamos redirigir al login o reiniciar el form
+                onBack(); // Volver al inicio
+                return;
+            }
+
             toast.success('¡Cuenta creada exitosamente!');
             onSuccess();
         } catch (error) {
-            toast.error('Error al crear la cuenta');
+            // El error ya lo maneja el hook useAuth y lo muestra en el estado authError si es necesario,
+            // pero aquí mostramos u feedback visual inmediato.
+            // toast.error('Error al crear la cuenta'); 
         }
     };
 

@@ -36,7 +36,7 @@ function RegisterWrapper() {
   return (
     <Register
       onBack={() => navigate('/')}
-      onSuccess={() => navigate('/login')}
+      onSuccess={() => navigate('/dashboard')}
     />
   );
 }

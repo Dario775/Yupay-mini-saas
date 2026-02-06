@@ -8,11 +8,9 @@ import {
   DollarSign,
   BarChart3,
   AlertTriangle,
-  Zap,
-  Eye
+  Zap
 } from 'lucide-react';
 import FlashOffersManager from '@/components/FlashOffersManager';
-import StorePreview from '@/components/StorePreview';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,7 +41,7 @@ export default function StoreDashboard() {
     maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
   } = useStoreData(storeId);
 
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState('products');
 
   // Logic to calculate estimated financial data (demo)
@@ -99,7 +97,7 @@ export default function StoreDashboard() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-              {store?.name || 'Mi Tienda'}
+              {store?.name || authStore?.name || 'Mi Tienda'}
             </h1>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <Badge variant="outline" className="h-4 text-[8px] border-emerald-500/50 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase">Online</Badge>
@@ -109,23 +107,6 @@ export default function StoreDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            onClick={() => window.open(`/store/${store?.id || 'demo'}`, '_blank')}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Ver mi tienda
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => setIsPreviewOpen(true)}
-          >
-            <Eye className="h-3 w-3" />Ver tienda
-          </Button>
           <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs ring-2 ring-white dark:ring-gray-800">T</div>
         </div>
       </div>
@@ -213,16 +194,7 @@ export default function StoreDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Vista Previa de Tienda */}
-      <StorePreview
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        store={store}
-        products={products}
-        shippingMethods={shippingMethods}
-        paymentMethods={paymentMethods}
-        activeFlashOffers={activeFlashOffers}
-      />
+
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">

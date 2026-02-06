@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string, role?: UserRole) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: RegisterStoreData) => Promise<{ user: User; store: Store; subscription: Subscription }>;
+  register: (data: RegisterStoreData) => Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }>;
   isLoading: boolean;
   authError: string | null;
   isDemoMode: boolean;
@@ -137,47 +137,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🔍 Loading profile for userId:', userId);
     try {
       // 1. Cargar perfil básico
-      const { data: profile, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      let profile = profileData;
+
       if (profileError) {
-        console.warn('⚠️ No profile found in DB, creating fallback user');
+        console.warn('⚠️ No profile found in DB. Constructing fallback user context...');
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
-        const fallbackUser: User = {
+        // Creamos un perfil temporal basado en metadata para no bloquear la UI
+        const meta = session.user.user_metadata;
+        profile = {
           id: session.user.id,
           email: session.user.email!,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-          role: isAdminEmail(session.user.email!) ? 'admin' : 'cliente',
-          createdAt: new Date(),
-          isActive: true
+          name: meta?.name || session.user.email?.split('@')[0],
+          role: meta?.role || (isAdminEmail(session.user.email!) ? 'admin' : 'cliente'),
+          created_at: new Date().toISOString(),
+          is_active: true
         };
-        setUser(fallbackUser);
-        console.log('✅ Fallback user set:', fallbackUser.role);
-        return;
       }
 
-      console.log('✅ Profile loaded:', profile.email, 'Role from DB:', profile.role);
+      console.log('✅ User Context Loaded:', profile.email, 'Role:', profile.role);
 
       // 2. Determinar el rol inicial
       const isGlobalAdmin = isAdminEmail(profile.email);
       let effectiveRole = isGlobalAdmin ? 'admin' : (profile.role as UserRole);
 
       // 3. SIEMPRE intentar cargar tienda del dueño
-      const { data: storeData, error: storeError } = await supabase
+      const { data: initialStoreData, error: storeError } = await supabase
         .from('stores')
         .select('*')
         .eq('owner_id', userId)
         .maybeSingle();
 
-      if (storeData) {
-        console.log('🏠 Store found for user:', storeData.name);
-        // Si tiene tienda, forzar rol de tienda aunque el perfil diga cliente
+      let storeData = initialStoreData;
+
+      if (storeData && effectiveRole !== 'admin') {
+        console.log('🏠 Store found for user (switching to store view):', storeData.name);
         effectiveRole = 'tienda';
+      } else if (storeData && effectiveRole === 'admin') {
+        console.log('🛡️ Admin user has a store, but keeping admin role');
+      } else if (effectiveRole === 'tienda' && !storeData && !isGlobalAdmin) {
+        // C. RECUPERACIÓN DE TIENDA:
+        // Si es rol 'tienda' pero no hay datos en 'stores', verificamos metadatos para crearla.
+        // Esto pasa cuando el usuario se registró con confirmación de email.
+        console.log('⚠️ Store role implies store, but none found. Checking metadata for deferred creation...');
+
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const metadata = authUser?.user_metadata;
+
+        if (metadata?.store_name) {
+          console.log('✨ Found store metadata! Creating store now...', metadata.store_name);
+          try {
+            // Crear tienda tardía
+            const { data: newStore, error: newStoreErr } = await supabase.from('stores').insert({
+              owner_id: userId,
+              name: metadata.store_name,
+              category: metadata.store_category || 'General',
+              email: authUser?.email,
+              phone: metadata.phone || null,
+              is_active: true,
+            }).select().single();
+
+            if (newStore && !newStoreErr) {
+              // Crear suscripción tardía
+              const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 14);
+              const endDate = new Date(); endDate.setFullYear(endDate.getFullYear() + 1);
+
+              await supabase.from('subscriptions').insert({
+                user_id: userId,
+                store_id: newStore.id,
+                plan: 'profesional',
+                status: 'trial',
+                price: 0,
+                start_date: new Date().toISOString(),
+                end_date: endDate.toISOString(),
+                trial_end_date: trialEnd.toISOString(),
+                auto_renew: false,
+                sales_this_month: 0,
+                last_reset_date: new Date().toISOString(),
+              });
+
+              // Actualizar variables locales para que la UI se refresque inmediatamente
+              storeData = newStore;
+              console.log('✅ Deferred store creation successful:', newStore.name);
+
+              // Limpiar metadata para no reintentar (opcional, pero buena práctica)
+              /* await supabase.auth.updateUser({ data: { store_name: null } }); */
+            } else {
+              console.error('❌ Failed to create deferred store:', newStoreErr);
+            }
+          } catch (recoveryErr) {
+            console.error('❌ Error in deferred store creation:', recoveryErr);
+          }
+        }
       } else {
         console.log('ℹ️ No core store found for this user ID');
       }
@@ -196,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🚀 Setting final user role:', loadedUser.role);
       setUser(loadedUser);
 
-      // 4. Si tiene tienda, cargar datos completos
+      // 4. Si tiene tienda (o la acabamos de crear), cargar datos completos
       if (storeData) {
         setStore({
           id: storeData.id,
@@ -313,7 +371,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isDemoMode]);
 
-  const register = useCallback(async (data: RegisterStoreData): Promise<{ user: User; store: Store; subscription: Subscription }> => {
+  const register = useCallback(async (data: RegisterStoreData): Promise<{ user: User | null; store: Store | null; subscription: Subscription | null; emailConfirmationRequired?: boolean }> => {
     setIsLoading(true);
     setAuthError(null);
 
@@ -326,6 +384,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name: data.ownerName,
             role: 'tienda',
+            // Guardamos datos de la tienda en metadata para recuperarlos si hay confirmación de email
+            store_name: data.storeName,
+            store_category: data.category,
+            phone: data.phone,
           },
         },
       });
@@ -338,17 +400,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No se pudo crear el usuario');
       }
 
+      // Si Supabase requiere confirmación de email, no tendremos sesión aún.
+      // Los datos quedan en metadata y se procesarán en el primer login.
+      if (!authData.session) {
+        return {
+          user: null,
+          store: null,
+          subscription: null,
+          emailConfirmationRequired: true
+        };
+      }
+
       const userId = authData.user.id;
 
       // 2. Actualizar el perfil con datos adicionales
-      await supabase
-        .from('profiles')
-        .update({
-          name: data.ownerName,
-          role: 'tienda',
-          phone: data.phone || null,
-        })
-        .eq('id', userId);
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            name: data.ownerName,
+            role: 'tienda',
+            phone: data.phone || null,
+          })
+          .eq('id', userId);
+      } catch (err) {
+        console.warn('Error updating profile immediately:', err);
+      }
 
       // 3. Crear la tienda
       const { data: storeData, error: storeError } = await supabase
@@ -394,6 +471,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (subError) {
+        // Si falla la suscripción, podríamos querer borrar la tienda para evitar inconsistencias,
+        // pero por ahora solo lanzamos el error.
+        console.error('Error creating subscription:', subError);
         throw subError;
       }
 
@@ -438,9 +518,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastResetDate: new Date(),
       };
 
-      setUser(newUser);
-      setStore(newStore);
-      setSubscription(newSubscription);
+      // Recargar el perfil completo desde la BD para asegurar consistencia
+      // y evitar condiciones de carrera con onAuthStateChange
+      await loadUserProfile(userId);
+
+      // Obtenemos el estado actualizado para devolverlo (aunque loadUserProfile ya actualizó el contexto)
+      // Nota: Como loadUserProfile es async y actualiza el estado, aquí podríamos devolver los objetos construidos
+      // o confiar en el estado. Para cumplir con la firma, devolvemos lo construido localmente
+      // pero sabiendo que el estado ya se refrescó con la verdad de la BD.
 
       return { user: newUser, store: newStore, subscription: newSubscription };
     } catch (error) {
@@ -495,22 +580,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isDemoMode]);
 
   const logout = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      await supabase.auth.signOut();
+    // 1. Limpiar estado local PRIMERO para respuesta inmediata en la UI
+    setUser(null);
+    setStore(null);
+    setSubscription(null);
+    setSession(null);
 
-      // Limpiar estado local inmediatamente
-      setUser(null);
-      setStore(null);
-      setSubscription(null);
-      setSession(null);
+    // 2. Redirigir inmediatamente (no esperar a Supabase)
+    window.location.href = '/';
 
-      // Forzar una redirección limpia
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Logout error:', error);
-      setIsLoading(false);
-    }
+    // 3. El signOut corre en background (la redirección ya sucedió)
+    supabase.auth.signOut().catch(err => console.error('Logout error:', err));
   }, []);
 
   const value = {

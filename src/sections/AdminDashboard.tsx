@@ -150,6 +150,10 @@ export default function AdminDashboard() {
 
 
       </Tabs>
+
+      <div className="mt-8 text-center text-xs text-slate-400 dark:text-slate-600">
+        Yupay v0.1.0 — <span className="opacity-75">Neurocortex</span>
+      </div>
     </div>
   );
 }
