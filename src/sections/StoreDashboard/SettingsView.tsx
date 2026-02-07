@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
     Settings, Truck, CreditCard, MapPin,
     Loader2, CheckCircle, Plus, MoreHorizontal,
-    Wallet, Banknote, Home, User
+    Wallet, Banknote, Home, User, Crown, Zap, Sparkles, Check, ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ import { searchAddresses, getCurrentPosition, reverseGeocode } from '@/lib/geo';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import type { Store, ShippingMethod, PaymentMethod, GeoLocation } from '@/types';
+import type { Store, ShippingMethod, PaymentMethod, GeoLocation, Subscription } from '@/types';
 
 interface SettingsViewProps {
     store: Store | null;
@@ -46,7 +46,56 @@ interface SettingsViewProps {
     addPaymentMethod: (method: Omit<PaymentMethod, 'id'>) => void;
     updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
     deletePaymentMethod: (id: string) => void;
+    subscription?: Subscription | null;
+    salesThisMonth?: number;
+    productsCount?: number;
 }
+
+// Plan definitions
+const PLANS = [
+    {
+        id: 'free',
+        name: 'Gratuito',
+        price: 0,
+        maxSales: 5,
+        maxProducts: 10,
+        features: ['5 ventas/mes', '10 productos', 'Soporte por email'],
+        icon: Zap,
+        color: 'gray'
+    },
+    {
+        id: 'basico',
+        name: 'Básico',
+        price: 5000,
+        maxSales: 50,
+        maxProducts: 100,
+        features: ['50 ventas/mes', '100 productos', 'Estadísticas básicas', 'Soporte prioritario'],
+        icon: Sparkles,
+        color: 'blue',
+        popular: false
+    },
+    {
+        id: 'profesional',
+        name: 'Profesional',
+        price: 15000,
+        maxSales: 500,
+        maxProducts: 1000,
+        features: ['500 ventas/mes', '1000 productos', 'Ofertas Flash', '3 tiendas', 'Estadísticas avanzadas'],
+        icon: Crown,
+        color: 'violet',
+        popular: true
+    },
+    {
+        id: 'empresarial',
+        name: 'Empresarial',
+        price: 45000,
+        maxSales: -1,
+        maxProducts: -1,
+        features: ['Ventas ilimitadas', 'Productos ilimitados', 'Hasta 10 tiendas', 'API access', 'Soporte dedicado'],
+        icon: Crown,
+        color: 'amber'
+    }
+];
 
 export function SettingsView({
     store,
@@ -58,7 +107,10 @@ export function SettingsView({
     paymentMethods,
     addPaymentMethod,
     updatePaymentMethod,
-    deletePaymentMethod
+    deletePaymentMethod,
+    subscription,
+    salesThisMonth = 0,
+    productsCount = 0
 }: SettingsViewProps) {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('general');
@@ -85,6 +137,66 @@ export function SettingsView({
     const [showNewPayment, setShowNewPayment] = useState(false);
     const [newPayment, setNewPayment] = useState({ type: 'transferencia' as const, name: '', description: '', instructions: '' });
     const [editingPayment, setEditingPayment] = useState<PaymentMethod | null>(null);
+
+    // Plan Upgrade State
+    const [isUpgrading, setIsUpgrading] = useState(false);
+    const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<string | null>(null);
+
+    const currentPlan = subscription?.plan || 'free';
+    const currentPlanIndex = PLANS.findIndex(p => p.id === currentPlan);
+
+    // Handle plan upgrade with MercadoPago
+    const handlePlanUpgrade = async (targetPlanId: string) => {
+        const targetPlan = PLANS.find(p => p.id === targetPlanId);
+        if (!targetPlan || !user || !store) return;
+
+        setIsUpgrading(true);
+        setSelectedUpgradePlan(targetPlanId);
+
+        try {
+            // Create upgrade request in database
+            const { data: upgradeRequest, error: dbError } = await supabase
+                .from('plan_upgrade_requests')
+                .insert({
+                    subscription_id: subscription?.id,
+                    user_id: user.id,
+                    store_id: store.id,
+                    current_plan: currentPlan,
+                    target_plan: targetPlanId,
+                    amount: targetPlan.price,
+                    status: 'pending'
+                })
+                .select()
+                .single();
+
+            if (dbError) throw dbError;
+
+            // Call Edge Function to create MercadoPago preference
+            const { data: mpData, error: mpError } = await supabase.functions.invoke('create-mp-preference', {
+                body: {
+                    upgradeRequestId: upgradeRequest.id,
+                    planName: targetPlan.name,
+                    amount: targetPlan.price,
+                    userEmail: user.email
+                }
+            });
+
+            if (mpError) throw mpError;
+
+            // Redirect to MercadoPago checkout
+            if (mpData?.init_point) {
+                window.location.href = mpData.init_point;
+            } else {
+                throw new Error('No se recibió URL de pago');
+            }
+        } catch (error) {
+            console.error('Error creating upgrade request:', error);
+            toast.error('Error al procesar la solicitud de upgrade');
+        } finally {
+            setIsUpgrading(false);
+            setSelectedUpgradePlan(null);
+        }
+    };
 
     // Location Handlers
     const handleSearchLocation = async (query: string) => {
@@ -166,6 +278,7 @@ export function SettingsView({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white dark:bg-gray-800 p-1 rounded-lg border dark:border-gray-800">
                 <TabsTrigger value="profile" className="text-xs"><User className="h-3 w-3 mr-1.5" />Perfil</TabsTrigger>
+                <TabsTrigger value="subscription" className="text-xs"><Crown className="h-3 w-3 mr-1.5" />Mi Plan</TabsTrigger>
                 <TabsTrigger value="general" className="text-xs"><Settings className="h-3 w-3 mr-1.5" />General</TabsTrigger>
                 <TabsTrigger value="shipping" className="text-xs"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
                 <TabsTrigger value="payments" className="text-xs"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
@@ -212,6 +325,138 @@ export function SettingsView({
                         </div>
                         <div className="flex justify-end pt-4">
                             <Button onClick={handleUpdateProfile} className="bg-violet-600 hover:bg-violet-700 text-white">Guardar Cambios</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            {/* Subscription Tab */}
+            <TabsContent value="subscription" className="space-y-6">
+                {/* Current Plan Card */}
+                <Card className="bg-gradient-to-br from-violet-600 to-purple-700 text-white border-0 shadow-lg">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-violet-200 text-xs uppercase tracking-wider">Tu plan actual</p>
+                                <h3 className="text-2xl font-bold mt-1 capitalize">{PLANS.find(p => p.id === currentPlan)?.name || 'Gratuito'}</h3>
+                                <p className="text-violet-200 text-sm mt-1">
+                                    {subscription?.status === 'trial' ? 'Período de prueba' : subscription?.status === 'activa' ? 'Activo' : 'Pendiente'}
+                                </p>
+                            </div>
+                            <Crown className="h-12 w-12 text-violet-300" />
+                        </div>
+
+                        {/* Usage Stats */}
+                        <div className="grid grid-cols-2 gap-4 mt-6">
+                            <div className="bg-white/10 rounded-lg p-3">
+                                <p className="text-violet-200 text-xs">Ventas este mes</p>
+                                <p className="text-xl font-bold">
+                                    {salesThisMonth} / {PLANS.find(p => p.id === currentPlan)?.maxSales === -1 ? '∞' : PLANS.find(p => p.id === currentPlan)?.maxSales}
+                                </p>
+                            </div>
+                            <div className="bg-white/10 rounded-lg p-3">
+                                <p className="text-violet-200 text-xs">Productos</p>
+                                <p className="text-xl font-bold">
+                                    {productsCount} / {PLANS.find(p => p.id === currentPlan)?.maxProducts === -1 ? '∞' : PLANS.find(p => p.id === currentPlan)?.maxProducts}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Available Plans */}
+                <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-white">Planes disponibles</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {PLANS.map((plan, index) => {
+                            const isCurrentPlan = plan.id === currentPlan;
+                            const isDowngrade = index < currentPlanIndex;
+                            const Icon = plan.icon;
+
+                            return (
+                                <Card
+                                    key={plan.id}
+                                    className={`relative overflow-hidden transition-all ${isCurrentPlan
+                                            ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20'
+                                            : 'bg-white dark:bg-gray-900 hover:shadow-lg'
+                                        } ${plan.popular ? 'ring-2 ring-amber-400' : ''}`}
+                                >
+                                    {plan.popular && (
+                                        <div className="absolute top-0 right-0 bg-amber-400 text-xs font-bold px-2 py-1 rounded-bl-lg">
+                                            POPULAR
+                                        </div>
+                                    )}
+                                    <CardContent className="p-4">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.color === 'gray' ? 'bg-gray-100 text-gray-600' :
+                                                plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
+                                                    plan.color === 'violet' ? 'bg-violet-100 text-violet-600' :
+                                                        'bg-amber-100 text-amber-600'
+                                            }`}>
+                                            <Icon className="h-5 w-5" />
+                                        </div>
+
+                                        <h4 className="font-bold text-gray-900 dark:text-white">{plan.name}</h4>
+                                        <div className="mt-2">
+                                            <span className="text-2xl font-bold dark:text-white">
+                                                {plan.price === 0 ? 'Gratis' : formatPrice(plan.price)}
+                                            </span>
+                                            {plan.price > 0 && <span className="text-gray-500 text-sm">/mes</span>}
+                                        </div>
+
+                                        <ul className="mt-4 space-y-2">
+                                            {plan.features.map((feature, i) => (
+                                                <li key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                    <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        <div className="mt-4">
+                                            {isCurrentPlan ? (
+                                                <Button disabled className="w-full" variant="outline">
+                                                    Tu plan actual
+                                                </Button>
+                                            ) : isDowngrade ? (
+                                                <Button disabled variant="ghost" className="w-full text-gray-400">
+                                                    Plan inferior
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    className={`w-full ${plan.color === 'violet'
+                                                            ? 'bg-violet-600 hover:bg-violet-700'
+                                                            : plan.color === 'amber'
+                                                                ? 'bg-amber-500 hover:bg-amber-600'
+                                                                : 'bg-blue-600 hover:bg-blue-700'
+                                                        } text-white`}
+                                                    onClick={() => handlePlanUpgrade(plan.id)}
+                                                    disabled={isUpgrading}
+                                                >
+                                                    {isUpgrading && selectedUpgradePlan === plan.id ? (
+                                                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando...</>
+                                                    ) : (
+                                                        <>Mejorar a {plan.name} <ArrowRight className="h-4 w-4 ml-1" /></>
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Payment Info */}
+                <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <CardContent className="p-4 flex items-start gap-3">
+                        <Wallet className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Pagos seguros con MercadoPago</p>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                Al hacer clic en "Mejorar" serás redirigido a MercadoPago para completar el pago de forma segura.
+                                El plan se activará automáticamente al confirmar el pago.
+                            </p>
                         </div>
                     </CardContent>
                 </Card>

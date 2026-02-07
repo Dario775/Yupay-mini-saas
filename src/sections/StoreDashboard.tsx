@@ -28,6 +28,23 @@ import { SettingsView } from './StoreDashboard/SettingsView';
 export default function StoreDashboard() {
   const { user, store: authStore, isLoading } = useAuth();
 
+  // Usar el ID de la tienda del usuario autenticado o un string vacío si no hay
+  const storeId = authStore?.id || '';
+
+  // Todos los hooks deben ir AQUÍ arriba, no después de ifs
+  const {
+    stats, products, orders, lowStockProducts, subscription,
+    addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock,
+    shippingMethods, addShippingMethod, updateShippingMethod, deleteShippingMethod,
+    paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod,
+    store, updateStoreInfo,
+    // Flash Offers
+    flashOffers, activeFlashOffers, canCreateFlashOffer, flashOffersRemaining,
+    maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
+  } = useStoreData(storeId);
+
+  const [activeTab, setActiveTab] = useState('products');
+
   // Show loading state while auth is initializing
   if (isLoading) {
     return (
@@ -41,7 +58,7 @@ export default function StoreDashboard() {
   }
 
   // Si no hay tienda, mostrar error y opción de recargar
-  if (!authStore && !isLoading && isSupabaseConfigured) {
+  if (!authStore && isSupabaseConfigured) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
@@ -55,22 +72,6 @@ export default function StoreDashboard() {
     );
   }
 
-  // Usar el ID de la tienda del usuario autenticado
-  const storeId = authStore?.id || '';
-
-  const {
-    stats, products, orders, lowStockProducts, subscription,
-    addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock,
-    shippingMethods, addShippingMethod, updateShippingMethod, deleteShippingMethod,
-    paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod,
-    store, updateStoreInfo,
-    // Flash Offers
-    flashOffers, activeFlashOffers, canCreateFlashOffer, flashOffersRemaining,
-    maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
-  } = useStoreData(storeId);
-
-
-  const [activeTab, setActiveTab] = useState('products');
 
   // Logic to calculate estimated financial data (demo)
   // const estimatedDiscounts = products.filter(p => p.discount).length * 125.50;
@@ -218,6 +219,9 @@ export default function StoreDashboard() {
             addPaymentMethod={addPaymentMethod}
             updatePaymentMethod={updatePaymentMethod}
             deletePaymentMethod={deletePaymentMethod}
+            subscription={subscription}
+            salesThisMonth={subscription?.salesThisMonth || 0}
+            productsCount={products.length}
           />
         </TabsContent>
       </Tabs>
