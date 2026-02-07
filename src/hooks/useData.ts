@@ -355,9 +355,10 @@ export function useClientData(userId: string) {
 
     const fetchClientData = async () => {
       try {
-        const [dbProducts, dbStores] = await Promise.all([
+        const [dbProducts, dbStores, dbOrders] = await Promise.all([
           clientApi.getAllProducts(),
-          clientApi.getAllStores()
+          clientApi.getAllStores(),
+          userId ? clientApi.getMyOrders(userId) : Promise.resolve([])
         ]);
 
         if (dbProducts) {
@@ -379,6 +380,16 @@ export function useClientData(userId: string) {
             ownerId: s.owner_id,
             isActive: s.is_active,
             createdAt: new Date(s.created_at)
+          })));
+        }
+
+        if (dbOrders) {
+          setOrders(dbOrders.map((o: any) => ({
+            ...o,
+            customerId: o.customer_id,
+            storeId: o.store_id,
+            shippingAddress: o.shipping_address,
+            createdAt: new Date(o.created_at)
           })));
         }
       } catch (error) {
@@ -411,14 +422,77 @@ export function useClientData(userId: string) {
     }
   ]);
 
-  const createOrder = useCallback((storeId: string, items: Order['items'], shippingAddress: string) => {
-    const newOrder: Order = { id: `ord${Date.now()}`, customerId: userId, storeId, items, total: items.reduce((acc, item) => acc + item.total, 0), status: 'pendiente', createdAt: new Date(), shippingAddress };
+  const createOrder = useCallback(async (storeId: string, items: Order['items'], shippingAddress: string) => {
+    const total = items.reduce((acc, item) => acc + item.total, 0);
+
+    // Crear orden optimistamente en local
+    const tempId = `ord${Date.now()}`;
+    const newOrder: Order = {
+      id: tempId,
+      customerId: userId,
+      storeId,
+      items,
+      total,
+      status: 'pendiente',
+      createdAt: new Date(),
+      shippingAddress
+    };
     setOrders(prev => [newOrder, ...prev]);
+
+    // Persistir en Supabase
+    if (isSupabaseConfigured) {
+      try {
+        const savedOrder = await clientApi.createOrder({
+          customer_id: userId,
+          store_id: storeId,
+          items,
+          total,
+          shipping_address: shippingAddress
+        });
+
+        // Actualizar con el ID real de Supabase
+        if (savedOrder) {
+          setOrders(prev => prev.map(o =>
+            o.id === tempId
+              ? { ...o, id: savedOrder.id }
+              : o
+          ));
+          toast.success('¡Pedido realizado con éxito!');
+        }
+      } catch (err) {
+        console.error('Error creating order in Supabase:', err);
+        toast.error('Error al guardar el pedido.');
+        // Remover orden fallida
+        setOrders(prev => prev.filter(o => o.id !== tempId));
+        return null;
+      }
+    }
+
     return newOrder;
   }, [userId]);
 
-  const cancelOrder = useCallback((orderId: string) => {
-    setOrders(prev => prev.map(o => o.id === orderId && o.status === 'pendiente' ? { ...o, status: 'cancelado' as OrderStatus } : o));
+  const cancelOrder = useCallback(async (orderId: string) => {
+    // Actualizar optimistamente
+    setOrders(prev => prev.map(o =>
+      o.id === orderId && o.status === 'pendiente'
+        ? { ...o, status: 'cancelado' as OrderStatus }
+        : o
+    ));
+
+    // Persistir en Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await clientApi.cancelOrder(orderId);
+        toast.success('Pedido cancelado');
+      } catch (err) {
+        console.error('Error canceling order in Supabase:', err);
+        toast.error('Error al cancelar el pedido.');
+        // Revertir el estado
+        setOrders(prev => prev.map(o =>
+          o.id === orderId ? { ...o, status: 'pendiente' as OrderStatus } : o
+        ));
+      }
+    }
   }, []);
 
   const toggleFavorite = useCallback((productId: string) => {
@@ -502,9 +576,10 @@ export function useStoreData(storeId: string) {
     const fetchStoreData = async () => {
       setIsLoading(true);
       try {
-        const [dbStore, dbProducts] = await Promise.all([
+        const [dbStore, dbProducts, dbOrders] = await Promise.all([
           storeApi.getStore(storeId),
-          storeApi.getProducts(storeId)
+          storeApi.getProducts(storeId),
+          storeApi.getOrders(storeId)
         ]);
 
         if (dbStore) {
@@ -521,6 +596,15 @@ export function useStoreData(storeId: string) {
             storeId: p.store_id,
             isActive: p.is_active,
             createdAt: new Date(p.created_at)
+          })));
+        }
+        if (dbOrders) {
+          setOrders(dbOrders.map((o: any) => ({
+            ...o,
+            customerId: o.customer_id,
+            storeId: o.store_id,
+            shippingAddress: o.shipping_address,
+            createdAt: new Date(o.created_at)
           })));
         }
       } catch (err) {

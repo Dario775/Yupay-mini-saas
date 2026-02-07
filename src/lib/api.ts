@@ -154,6 +154,24 @@ export const storeApi = {
             .delete()
             .eq('id', id);
         if (error) throw error;
+    },
+
+    async getOrders(storeId: string) {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('store_id', storeId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    async updateOrderStatus(orderId: string, status: string) {
+        const { error } = await supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', orderId);
+        if (error) throw error;
     }
 };
 
@@ -178,5 +196,44 @@ export const clientApi = {
             .eq('is_active', true);
         if (error) throw error;
         return data;
+    },
+
+    async createOrder(order: {
+        customer_id: string;
+        store_id: string;
+        items: any[];
+        total: number;
+        shipping_address: string;
+        status?: string;
+    }) {
+        const { data, error } = await supabase
+            .from('orders')
+            .insert([{
+                ...order,
+                status: order.status || 'pendiente',
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    async getMyOrders(customerId: string) {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('customer_id', customerId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    async cancelOrder(orderId: string) {
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: 'cancelado' })
+            .eq('id', orderId);
+        if (error) throw error;
     }
 };
