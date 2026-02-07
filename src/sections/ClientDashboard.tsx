@@ -64,7 +64,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
   const { user } = useAuth();
   const {
     orders, products, stores, favorites, flashOffers,
-    createOrder, cancelOrder, toggleFavorite, isFavorite
+    createOrder, cancelOrder, toggleFavorite, isFavorite, refreshOrders
   } = useClientData(user?.id || '2');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
@@ -80,6 +80,13 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
     window.addEventListener('toggle-cart', handleToggleCart);
     return () => window.removeEventListener('toggle-cart', handleToggleCart);
   }, []);
+
+  // Refrescar pedidos cuando se accede a la pestaña de pedidos
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      refreshOrders();
+    }
+  }, [activeTab, refreshOrders]);
 
   // Estados para ubicación
   const [userLocation, setUserLocation] = useState<GeoLocation | null>(user?.location || null);

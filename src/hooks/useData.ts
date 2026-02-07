@@ -510,7 +510,27 @@ export function useClientData(userId: string) {
 
   const isFavorite = useCallback((productId: string) => favorites.includes(productId), [favorites]);
 
-  return { orders, products, stores, favorites, flashOffers, createOrder, cancelOrder, toggleFavorite, isFavorite };
+  // Función para refrescar pedidos desde Supabase
+  const refreshOrders = useCallback(async () => {
+    if (!isSupabaseConfigured || !userId) return;
+
+    try {
+      const dbOrders = await clientApi.getMyOrders(userId);
+      if (dbOrders) {
+        setOrders(dbOrders.map((o: any) => ({
+          ...o,
+          customerId: o.customer_id,
+          storeId: o.store_id,
+          shippingAddress: o.shipping_address,
+          createdAt: new Date(o.created_at)
+        })));
+      }
+    } catch (error) {
+      console.error('Error refreshing orders:', error);
+    }
+  }, [userId]);
+
+  return { orders, products, stores, favorites, flashOffers, createOrder, cancelOrder, toggleFavorite, isFavorite, refreshOrders };
 }
 
 // Hook para Tienda - Con lógica de límites
