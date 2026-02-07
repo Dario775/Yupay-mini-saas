@@ -24,8 +24,11 @@ serve(async (req) => {
             throw new Error('Missing required fields: upgradeRequestId, planName, amount')
         }
 
+        console.log('📋 Request received:', { upgradeRequestId, planName, amount, userEmail })
+        console.log('🔑 Token prefix:', MP_ACCESS_TOKEN.substring(0, 20) + '...')
+
         // Get the origin for back URLs
-        const origin = req.headers.get('origin') || 'http://localhost:5173'
+        const origin = req.headers.get('origin') || 'https://yupay.com.ar'
 
         // Create MercadoPago preference
         const preferenceData = {
@@ -36,7 +39,7 @@ serve(async (req) => {
                     description: `Suscripción mensual al plan ${planName}`,
                     quantity: 1,
                     currency_id: 'ARS',
-                    unit_price: amount
+                    unit_price: Number(amount)
                 }
             ],
             payer: {
@@ -53,6 +56,8 @@ serve(async (req) => {
             statement_descriptor: 'YUPAY'
         }
 
+        console.log('📤 Sending to MercadoPago:', JSON.stringify(preferenceData, null, 2))
+
         const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
             method: 'POST',
             headers: {
@@ -62,13 +67,15 @@ serve(async (req) => {
             body: JSON.stringify(preferenceData)
         })
 
+        const responseText = await mpResponse.text()
+        console.log('📥 MercadoPago response status:', mpResponse.status)
+        console.log('📥 MercadoPago response body:', responseText)
+
         if (!mpResponse.ok) {
-            const errorData = await mpResponse.text()
-            console.error('MercadoPago error:', errorData)
-            throw new Error(`MercadoPago API error: ${mpResponse.status}`)
+            throw new Error(`MercadoPago API error ${mpResponse.status}: ${responseText}`)
         }
 
-        const mpData = await mpResponse.json()
+        const mpData = JSON.parse(responseText)
 
         // Update the upgrade request with preference ID
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!
