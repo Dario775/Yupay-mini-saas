@@ -201,10 +201,17 @@ export function SettingsView({
 
             if (mpError) {
                 console.error('❌ MP Error:', mpError);
-                throw new Error(`Error con MercadoPago: ${mpError.message}`);
+                const errorMsg = mpError.message || 'Error desconocido';
+                throw new Error(`Error con MercadoPago: ${errorMsg}`);
             }
 
             console.log('✅ MercadoPago response:', mpData);
+
+            // Check if mpData has error details from Edge Function
+            if (mpData?.error) {
+                console.error('❌ Edge Function returned error:', mpData);
+                throw new Error(mpData.error + (mpData.details ? `\n${mpData.details}` : ''));
+            }
 
             // Redirect to MercadoPago checkout
             if (mpData?.init_point) {

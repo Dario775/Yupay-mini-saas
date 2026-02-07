@@ -77,15 +77,32 @@ serve(async (req) => {
 
         const mpData = JSON.parse(responseText)
 
-        // Update the upgrade request with preference ID
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseKey)
+        console.log('✅ MercadoPago preference created:', mpData.id)
 
-        await supabase
-            .from('plan_upgrade_requests')
-            .update({ mp_preference_id: mpData.id })
-            .eq('id', upgradeRequestId)
+        // Update the upgrade request with preference ID (optional - don't fail if this errors)
+        try {
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')
+            const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+            if (!supabaseUrl || !supabaseKey) {
+                console.warn('⚠️ Supabase credentials not found, skipping DB update')
+            } else {
+                const supabase = createClient(supabaseUrl, supabaseKey)
+
+                const { error: updateError } = await supabase
+                    .from('plan_upgrade_requests')
+                    .update({ mp_preference_id: mpData.id })
+                    .eq('id', upgradeRequestId)
+
+                if (updateError) {
+                    console.error('⚠️ Failed to update DB:', updateError)
+                } else {
+                    console.log('✅ Database updated with preference ID')
+                }
+            }
+        } catch (dbErr) {
+            console.error('⚠️ DB update error (non-fatal):', dbErr)
+        }
 
         return new Response(
             JSON.stringify({
@@ -99,10 +116,18 @@ serve(async (req) => {
             }
         )
 
-    } catch (error) {
-        console.error('Error:', error)
+    } catch (error: any) {
+        console.error('❌ Fatal error:', error)
+        const errorMessage = error?.message || String(error)
+        const errorDetails = {
+            error: errorMessage,
+            type: error?.name || 'UnknownError',
+            details: error?.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace'
+        }
+        console.error('Error details:', errorDetails)
+
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify(errorDetails),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400
