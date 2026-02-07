@@ -442,10 +442,19 @@ export function useClientData(userId: string) {
     // Persistir en Supabase
     if (isSupabaseConfigured) {
       try {
+        // Mapear items al formato de la API
+        const apiItems = items.map(item => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          price: item.unitPrice,  // unitPrice -> price
+          total: item.total
+        }));
+
         const savedOrder = await clientApi.createOrder({
           customer_id: userId,
           store_id: storeId,
-          items,
+          items: apiItems,
           total,
           shipping_address: shippingAddress
         });

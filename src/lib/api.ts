@@ -157,13 +157,31 @@ export const storeApi = {
     },
 
     async getOrders(storeId: string) {
-        const { data, error } = await supabase
+        // Obtener órdenes de la tienda
+        const { data: ordersData, error: ordersError } = await supabase
             .from('orders')
             .select('*')
             .eq('store_id', storeId)
             .order('created_at', { ascending: false });
-        if (error) throw error;
-        return data;
+
+        if (ordersError) throw ordersError;
+
+        // Cargar items para cada orden
+        if (ordersData && ordersData.length > 0) {
+            const orderIds = ordersData.map(o => o.id);
+            const { data: itemsData } = await supabase
+                .from('order_items')
+                .select('*')
+                .in('order_id', orderIds);
+
+            // Agregar items a cada orden
+            return ordersData.map(order => ({
+                ...order,
+                items: itemsData?.filter(item => item.order_id === order.id) || []
+            }));
+        }
+
+        return ordersData;
     },
 
     async updateOrderStatus(orderId: string, status: string) {
@@ -201,32 +219,83 @@ export const clientApi = {
     async createOrder(order: {
         customer_id: string;
         store_id: string;
-        items: any[];
+        items: Array<{
+            productId: string;
+            productName: string;
+            quantity: number;
+            price: number;
+            total: number;
+        }>;
         total: number;
         shipping_address: string;
         status?: string;
     }) {
-        const { data, error } = await supabase
+        // 1. Crear la orden (sin items)
+        const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .insert([{
-                ...order,
+                customer_id: order.customer_id,
+                store_id: order.store_id,
+                total: order.total,
+                shipping_address: order.shipping_address,
                 status: order.status || 'pendiente',
                 created_at: new Date().toISOString()
             }])
             .select()
             .single();
-        if (error) throw error;
-        return data;
+
+        if (orderError) throw orderError;
+
+        // 2. Crear los items del pedido en la tabla order_items
+        if (order.items && order.items.length > 0) {
+            const orderItems = order.items.map(item => ({
+                order_id: orderData.id,
+                product_id: item.productId,
+                product_name: item.productName,
+                quantity: item.quantity,
+                unit_price: item.price,
+                total: item.total
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+
+            if (itemsError) {
+                console.error('Error creating order items:', itemsError);
+                // Nota: la orden ya fue creada, pero los items fallaron
+            }
+        }
+
+        return orderData;
     },
 
     async getMyOrders(customerId: string) {
-        const { data, error } = await supabase
+        // Obtener órdenes con sus items
+        const { data: ordersData, error: ordersError } = await supabase
             .from('orders')
             .select('*')
             .eq('customer_id', customerId)
             .order('created_at', { ascending: false });
-        if (error) throw error;
-        return data;
+
+        if (ordersError) throw ordersError;
+
+        // Cargar items para cada orden
+        if (ordersData && ordersData.length > 0) {
+            const orderIds = ordersData.map(o => o.id);
+            const { data: itemsData } = await supabase
+                .from('order_items')
+                .select('*')
+                .in('order_id', orderIds);
+
+            // Agregar items a cada orden
+            return ordersData.map(order => ({
+                ...order,
+                items: itemsData?.filter(item => item.order_id === order.id) || []
+            }));
+        }
+
+        return ordersData;
     },
 
     async cancelOrder(orderId: string) {
