@@ -281,13 +281,16 @@ export const storeApi = {
  */
 export const clientApi = {
     async getAllProducts() {
+        // Get products from active stores only
         const { data, error } = await supabase
             .from('products')
-            .select('*')
+            .select('*, stores!inner(is_active)')
             .eq('is_active', true)
+            .eq('stores.is_active', true)
             .order('created_at', { ascending: false });
         if (error) throw error;
-        return data;
+        // Remove the nested stores object from the result
+        return data?.map(({ stores, ...product }) => product);
     },
 
     async getAllStores() {

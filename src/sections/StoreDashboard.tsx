@@ -129,7 +129,11 @@ export default function StoreDashboard() {
               {store?.name || authStore?.name || 'Mi Tienda'}
             </h1>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <Badge variant="outline" className="h-4 text-[8px] border-emerald-500/50 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase">Online</Badge>
+              {(store?.isActive !== false && authStore?.isActive !== false) ? (
+                <Badge variant="outline" className="h-4 text-[8px] border-emerald-500/50 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase">Online</Badge>
+              ) : (
+                <Badge variant="outline" className="h-4 text-[8px] border-red-500/50 text-red-600 dark:text-red-400 px-1 py-0 uppercase">Suspendida</Badge>
+              )}
               Gestionando pedidos y catálogo
             </p>
           </div>
@@ -139,6 +143,22 @@ export default function StoreDashboard() {
           <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs ring-2 ring-white dark:ring-gray-800">T</div>
         </div>
       </div>
+
+      {/* Banner de tienda suspendida */}
+      {(store?.isActive === false || authStore?.isActive === false) && (
+        <div className="mb-6 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-800 dark:text-red-300">Tu tienda está suspendida</h3>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+              Tu tienda no es visible para los clientes. Los productos no aparecen en el catálogo público.
+              Contacta al administrador para reactivar tu cuenta.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid Minimalist */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
