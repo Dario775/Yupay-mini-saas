@@ -82,6 +82,15 @@ export const adminApi = {
             .update(updates)
             .eq('id', id);
         if (error) throw error;
+    },
+
+    async getAllStores() {
+        const { data, error } = await supabase
+            .from('stores')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
     }
 };
 

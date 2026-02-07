@@ -116,10 +116,10 @@ const DEMO_CLIENT_STORES: Store[] = [
 
 // Hook para Admin - Mejorado con métricas freemium
 export function useAdminData() {
-  const [subscriptions, setSubscriptions] = useLocalStorage<Subscription[]>('admin_subscriptions', DEMO_SUBSCRIPTIONS);
-  const [stores, setStores] = useLocalStorage<Store[]>('admin_stores', DEMO_STORES);
-  const [users, setUsers] = useLocalStorage<User[]>('admin_users', DEMO_USERS);
-  const [orders] = useState<Order[]>(DEMO_ORDERS);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [orders] = useState<Order[]>([]);
   const [planLimits, setPlanLimits] = useLocalStorage('admin_plan_limits', PLAN_LIMITS);
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
 
@@ -129,22 +129,89 @@ export function useAdminData() {
 
     const fetchData = async () => {
       setIsLoading(true);
-      try {
-        const [dbPlans, dbSubs, dbUsers] = await Promise.all([
-          adminApi.getPlanConfigs(),
-          adminApi.getSubscriptions(),
-          adminApi.getUsers()
-        ]);
+      console.log('🔄 Admin: Starting data fetch...');
 
-        if (dbPlans) setPlanLimits(dbPlans);
-        // Note: Transformation might be needed for subs and users to match UI types
-        // if (dbSubs) setSubscriptions(dbSubs);
-        // if (dbUsers) setUsers(dbUsers);
+      // Fetch plan configs
+      try {
+        const dbPlans = await adminApi.getPlanConfigs();
+        if (dbPlans) {
+          console.log('✅ Admin: Plan configs loaded');
+          setPlanLimits(dbPlans);
+        }
       } catch (err) {
-        console.error('Error fetching Supabase data:', err);
-      } finally {
-        setIsLoading(false);
+        console.error('❌ Admin: Error loading plan configs:', err);
       }
+
+      // Fetch subscriptions
+      try {
+        const dbSubs = await adminApi.getSubscriptions();
+        if (dbSubs) {
+          console.log('✅ Admin: Loaded subscriptions:', dbSubs.length);
+          setSubscriptions(dbSubs.map((s: any) => ({
+            id: s.id,
+            userId: s.user_id,
+            storeId: s.store_id,
+            plan: s.plan,
+            status: s.status,
+            startDate: new Date(s.start_date),
+            endDate: new Date(s.end_date),
+            trialEndDate: s.trial_end_date ? new Date(s.trial_end_date) : undefined,
+            price: Number(s.price),
+            autoRenew: s.auto_renew,
+            salesThisMonth: s.sales_this_month || 0,
+            lastResetDate: s.last_reset_date ? new Date(s.last_reset_date) : new Date()
+          })));
+        }
+      } catch (err) {
+        console.error('❌ Admin: Error loading subscriptions:', err);
+      }
+
+      // Fetch users
+      try {
+        const dbUsers = await adminApi.getUsers();
+        if (dbUsers) {
+          console.log('✅ Admin: Loaded users:', dbUsers.length);
+          setUsers(dbUsers.map((u: any) => ({
+            id: u.id,
+            email: u.email,
+            name: u.name || u.email?.split('@')[0] || 'Usuario',
+            role: u.role || 'cliente',
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.email}`,
+            phone: u.phone,
+            createdAt: new Date(u.created_at),
+            isActive: u.is_active ?? true
+          })));
+        }
+      } catch (err) {
+        console.error('❌ Admin: Error loading users:', err);
+      }
+
+      // Fetch stores
+      try {
+        const dbStores = await adminApi.getAllStores();
+        if (dbStores) {
+          console.log('📦 Admin: Loaded stores:', dbStores.length);
+          setStores(dbStores.map((s: any) => ({
+            id: s.id,
+            ownerId: s.owner_id,
+            name: s.name,
+            description: s.description || '',
+            category: s.category || 'General',
+            address: s.address || '',
+            phone: s.phone || '',
+            email: s.email || '',
+            isActive: s.is_active ?? true,
+            rating: s.rating || 0,
+            createdAt: new Date(s.created_at),
+            location: s.location
+          })));
+        }
+      } catch (err) {
+        console.error('❌ Admin: Error loading stores:', err);
+      }
+
+      setIsLoading(false);
+      console.log('🏁 Admin: Data fetch completed');
     };
 
     fetchData();
