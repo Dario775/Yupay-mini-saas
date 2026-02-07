@@ -77,11 +77,69 @@ export const adminApi = {
     },
 
     async updateUser(id: string, updates: any) {
+        const dbUpdates: Record<string, any> = {};
+
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.role !== undefined) dbUpdates.role = updates.role;
+        if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+        if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
+
+        console.log('📝 Updating user:', id, 'with:', dbUpdates);
+
         const { error } = await supabase
             .from('profiles')
-            .update(updates)
+            .update(dbUpdates)
             .eq('id', id);
-        if (error) throw error;
+
+        if (error) {
+            console.error('❌ Error updating user:', error);
+            throw error;
+        }
+        console.log('✅ User updated successfully');
+    },
+
+    async deleteStore(id: string) {
+        console.log('🗑️ Deleting store:', id);
+        const { error } = await supabase
+            .from('stores')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('❌ Error deleting store:', error);
+            throw error;
+        }
+        console.log('✅ Store deleted successfully');
+    },
+
+    async deleteUser(id: string) {
+        console.log('🗑️ Deleting user profile:', id);
+        const { error } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('❌ Error deleting user:', error);
+            throw error;
+        }
+        console.log('✅ User deleted successfully');
+    },
+
+    async deleteSubscription(id: string) {
+        console.log('🗑️ Deleting subscription:', id);
+        const { error } = await supabase
+            .from('subscriptions')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('❌ Error deleting subscription:', error);
+            throw error;
+        }
+        console.log('✅ Subscription deleted successfully');
     },
 
     async getAllStores() {
@@ -119,15 +177,31 @@ export const storeApi = {
     },
 
     async updateStore(id: string, updates: any) {
-        const dbUpdates: any = { ...updates };
-        if (updates.ownerId) dbUpdates.owner_id = updates.ownerId;
+        // Map camelCase to snake_case and only include valid DB fields
+        const dbUpdates: Record<string, any> = {};
+
+        if (updates.ownerId !== undefined) dbUpdates.owner_id = updates.ownerId;
         if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.description !== undefined) dbUpdates.description = updates.description;
+        if (updates.category !== undefined) dbUpdates.category = updates.category;
+        if (updates.address !== undefined) dbUpdates.address = updates.address;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.location !== undefined) dbUpdates.location = updates.location;
+
+        console.log('📝 Updating store:', id, 'with:', dbUpdates);
 
         const { error } = await supabase
             .from('stores')
             .update(dbUpdates)
             .eq('id', id);
-        if (error) throw error;
+
+        if (error) {
+            console.error('❌ Error updating store:', error);
+            throw error;
+        }
+        console.log('✅ Store updated successfully');
     },
 
     async addProduct(product: any) {

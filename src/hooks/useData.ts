@@ -325,8 +325,20 @@ export function useAdminData() {
     }
   }, [planLimits, setSubscriptions]);
 
-  const deleteSubscription = useCallback((id: string) => {
+  const deleteSubscription = useCallback(async (id: string) => {
+    // 1. Local optimistic update
     setSubscriptions(prev => prev.filter(s => s.id !== id));
+
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.deleteSubscription(id);
+        toast.success('Suscripción eliminada');
+      } catch (err) {
+        console.error('Error deleting subscription in Supabase:', err);
+        toast.error('Error al eliminar la suscripción');
+      }
+    }
   }, []);
 
   // CRUD Tiendas
@@ -354,14 +366,31 @@ export function useAdminData() {
     if (isSupabaseConfigured) {
       try {
         await storeApi.updateStore(id, { isActive });
+        toast.success(isActive ? 'Tienda activada' : 'Tienda desactivada');
       } catch (err) {
         console.error('Error updating store status in Supabase:', err);
+        toast.error('Error al actualizar el estado de la tienda');
+        // Rollback
+        setStores(prev => prev.map(s => s.id === id ? { ...s, isActive: !isActive } : s));
       }
     }
   }, [setStores]);
 
-  const deleteStore = useCallback((id: string) => {
+  const deleteStore = useCallback(async (id: string) => {
+    // 1. Local optimistic update
     setStores(prev => prev.filter(s => s.id !== id));
+
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.deleteStore(id);
+        toast.success('Tienda eliminada');
+      } catch (err) {
+        console.error('Error deleting store in Supabase:', err);
+        toast.error('Error al eliminar la tienda');
+        // TODO: Rollback if needed
+      }
+    }
   }, [setStores]);
 
   // CRUD Usuarios
@@ -395,9 +424,21 @@ export function useAdminData() {
     }
   }, [setUsers]);
 
-  const deleteUser = useCallback((id: string) => {
+  const deleteUser = useCallback(async (id: string) => {
+    // 1. Local optimistic update
     setUsers(prev => prev.filter(u => u.id !== id));
     setSubscriptions(prev => prev.filter(s => s.userId !== id));
+
+    // 2. Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await adminApi.deleteUser(id);
+        toast.success('Usuario eliminado');
+      } catch (err) {
+        console.error('Error deleting user in Supabase:', err);
+        toast.error('Error al eliminar el usuario');
+      }
+    }
   }, []);
 
   return {
