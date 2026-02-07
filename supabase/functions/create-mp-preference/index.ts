@@ -29,9 +29,10 @@ serve(async (req) => {
 
         // Get the origin for back URLs
         const origin = req.headers.get('origin') || 'https://yupay.com.ar'
+        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
 
         // Create MercadoPago preference
-        const preferenceData = {
+        const preferenceData: any = {
             items: [
                 {
                     id: upgradeRequestId,
@@ -50,10 +51,14 @@ serve(async (req) => {
                 failure: `${origin}/dashboard?upgrade=failure`,
                 pending: `${origin}/dashboard?upgrade=pending`
             },
-            auto_return: 'approved',
             external_reference: upgradeRequestId,
             notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`,
             statement_descriptor: 'YUPAY'
+        }
+
+        // MercadoPago doesn't accept localhost URLs for auto_return
+        if (!isLocalhost) {
+            preferenceData.auto_return = 'approved'
         }
 
         console.log('📤 Sending to MercadoPago:', JSON.stringify(preferenceData, null, 2))
