@@ -764,9 +764,26 @@ export function useStoreData(storeId: string) {
     }
   }, []);
 
-  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
+    // Actualizar optimistamente
+    const previousStatus = orders.find(o => o.id === orderId)?.status;
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-  }, []);
+
+    // Persistir en Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.updateOrderStatus(orderId, status);
+        toast.success(`Pedido marcado como ${status}`);
+      } catch (err) {
+        console.error('Error updating order status in Supabase:', err);
+        toast.error('Error al actualizar el estado del pedido');
+        // Revertir el estado si falla
+        if (previousStatus) {
+          setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: previousStatus } : o));
+        }
+      }
+    }
+  }, [orders]);
 
   const updateStock = useCallback((productId: string, quantity: number) => {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: Math.max(0, p.stock + quantity) } : p));
