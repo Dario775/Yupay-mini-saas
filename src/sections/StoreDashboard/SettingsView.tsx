@@ -148,30 +148,48 @@ export function SettingsView({
     // Handle plan upgrade with MercadoPago
     const handlePlanUpgrade = async (targetPlanId: string) => {
         const targetPlan = PLANS.find(p => p.id === targetPlanId);
-        if (!targetPlan || !user || !store) return;
+        if (!targetPlan || !user || !store) {
+            toast.error('Faltan datos de usuario o tienda. Recarga la página.');
+            return;
+        }
 
         setIsUpgrading(true);
         setSelectedUpgradePlan(targetPlanId);
 
         try {
+            console.log('📋 Creating upgrade request...', { userId: user.id, storeId: store.id, subscriptionId: subscription?.id });
+
+            // Build insert data - subscription_id can be null
+            const insertData: Record<string, any> = {
+                user_id: user.id,
+                store_id: store.id,
+                current_plan: currentPlan,
+                target_plan: targetPlanId,
+                amount: targetPlan.price,
+                status: 'pending'
+            };
+
+            // Only add subscription_id if it exists
+            if (subscription?.id) {
+                insertData.subscription_id = subscription.id;
+            }
+
             // Create upgrade request in database
             const { data: upgradeRequest, error: dbError } = await supabase
                 .from('plan_upgrade_requests')
-                .insert({
-                    subscription_id: subscription?.id,
-                    user_id: user.id,
-                    store_id: store.id,
-                    current_plan: currentPlan,
-                    target_plan: targetPlanId,
-                    amount: targetPlan.price,
-                    status: 'pending'
-                })
+                .insert(insertData)
                 .select()
                 .single();
 
-            if (dbError) throw dbError;
+            if (dbError) {
+                console.error('❌ DB Error:', dbError);
+                throw new Error(`Error en base de datos: ${dbError.message}`);
+            }
+
+            console.log('✅ Upgrade request created:', upgradeRequest.id);
 
             // Call Edge Function to create MercadoPago preference
+            console.log('🔗 Calling MercadoPago Edge Function...');
             const { data: mpData, error: mpError } = await supabase.functions.invoke('create-mp-preference', {
                 body: {
                     upgradeRequestId: upgradeRequest.id,
@@ -181,17 +199,28 @@ export function SettingsView({
                 }
             });
 
-            if (mpError) throw mpError;
+            if (mpError) {
+                console.error('❌ MP Error:', mpError);
+                throw new Error(`Error con MercadoPago: ${mpError.message}`);
+            }
+
+            console.log('✅ MercadoPago response:', mpData);
 
             // Redirect to MercadoPago checkout
             if (mpData?.init_point) {
+                toast.success('Redirigiendo a MercadoPago...');
                 window.location.href = mpData.init_point;
+            } else if (mpData?.sandbox_init_point) {
+                // Use sandbox URL if available (for testing)
+                toast.success('Redirigiendo a MercadoPago (sandbox)...');
+                window.location.href = mpData.sandbox_init_point;
             } else {
-                throw new Error('No se recibió URL de pago');
+                console.error('❌ No init_point in response:', mpData);
+                throw new Error('No se recibió URL de pago de MercadoPago');
             }
-        } catch (error) {
-            console.error('Error creating upgrade request:', error);
-            toast.error('Error al procesar la solicitud de upgrade');
+        } catch (error: any) {
+            console.error('❌ Error creating upgrade request:', error);
+            toast.error(error.message || 'Error al procesar la solicitud de upgrade');
         } finally {
             setIsUpgrading(false);
             setSelectedUpgradePlan(null);
@@ -377,8 +406,8 @@ export function SettingsView({
                                 <Card
                                     key={plan.id}
                                     className={`relative overflow-hidden transition-all ${isCurrentPlan
-                                            ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20'
-                                            : 'bg-white dark:bg-gray-900 hover:shadow-lg'
+                                        ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20'
+                                        : 'bg-white dark:bg-gray-900 hover:shadow-lg'
                                         } ${plan.popular ? 'ring-2 ring-amber-400' : ''}`}
                                 >
                                     {plan.popular && (
@@ -388,9 +417,9 @@ export function SettingsView({
                                     )}
                                     <CardContent className="p-4">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.color === 'gray' ? 'bg-gray-100 text-gray-600' :
-                                                plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                                                    plan.color === 'violet' ? 'bg-violet-100 text-violet-600' :
-                                                        'bg-amber-100 text-amber-600'
+                                            plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
+                                                plan.color === 'violet' ? 'bg-violet-100 text-violet-600' :
+                                                    'bg-amber-100 text-amber-600'
                                             }`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
@@ -424,10 +453,10 @@ export function SettingsView({
                                             ) : (
                                                 <Button
                                                     className={`w-full ${plan.color === 'violet'
-                                                            ? 'bg-violet-600 hover:bg-violet-700'
-                                                            : plan.color === 'amber'
-                                                                ? 'bg-amber-500 hover:bg-amber-600'
-                                                                : 'bg-blue-600 hover:bg-blue-700'
+                                                        ? 'bg-violet-600 hover:bg-violet-700'
+                                                        : plan.color === 'amber'
+                                                            ? 'bg-amber-500 hover:bg-amber-600'
+                                                            : 'bg-blue-600 hover:bg-blue-700'
                                                         } text-white`}
                                                     onClick={() => handlePlanUpgrade(plan.id)}
                                                     disabled={isUpgrading}
