@@ -58,6 +58,7 @@ interface FlashOffersManagerProps {
     }) => FlashOffer | null;
     cancelFlashOffer: (offerId: string) => void;
     currentPlan: string;
+    onUpgradePrompt: () => void;
 }
 
 export default function FlashOffersManager({
@@ -69,7 +70,8 @@ export default function FlashOffersManager({
     maxFlashOfferRadius,
     createFlashOffer,
     cancelFlashOffer,
-    currentPlan
+    currentPlan,
+    onUpgradePrompt
 }: FlashOffersManagerProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -171,7 +173,10 @@ export default function FlashOffersManager({
                                 Radio de alcance configurable
                             </li>
                         </ul>
-                        <Button className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700">
+                        <Button
+                            className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700"
+                            onClick={onUpgradePrompt}
+                        >
                             <Crown className="w-4 h-4 mr-2" />
                             Actualizar a Plan Profesional
                             <ChevronRight className="w-4 h-4 ml-2" />

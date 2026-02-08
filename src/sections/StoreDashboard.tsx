@@ -8,7 +8,9 @@ import {
   DollarSign,
   BarChart3,
   AlertTriangle,
-  Zap
+  Zap,
+  ArrowRight,
+  Plus
 } from 'lucide-react';
 import FlashOffersManager from '@/components/FlashOffersManager';
 import { Button } from '@/components/ui/button';
@@ -44,30 +46,24 @@ export default function StoreDashboard() {
   } = useStoreData(storeId);
 
   const [activeTab, setActiveTab] = useState('products');
+  const [settingsTab, setSettingsTab] = useState('general');
 
-  // Show loading state while auth is initializing
-  if (isLoading) {
+  const handleFlashUpgrade = () => {
+    setSettingsTab('subscription');
+    setActiveTab('settings');
+  };
+
+  // Show loading state while auth or store data is initializing
+  if (isLoading || (!authStore && isSupabaseConfigured)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-gray-500 font-medium">Cargando tu tienda...</p>
+          <div className="w-10 h-10 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-center">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Preparando tu panel</h2>
+            <p className="text-[10px] text-gray-500 font-medium">Sincronizando datos de la tienda...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  // Si no hay tienda, mostrar error y opción de recargar
-  if (!authStore && isSupabaseConfigured) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No se encontró tu tienda</h1>
-        <p className="text-gray-500 text-center mb-6 max-w-md">
-          Parece que tu usuario no tiene una tienda asociada o hubo un error al cargarla.
-        </p>
-        <Button onClick={() => window.location.reload()}>Recargar página</Button>
-        <p className="text-xs text-gray-400 mt-8">ID de Usuario: {user?.id}</p>
       </div>
     );
   }
@@ -118,75 +114,74 @@ export default function StoreDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-2 sm:p-4 md:p-6 transition-colors duration-300">
-      {/* Header Compacto */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-violet-600 text-white shadow-md">
-            <Store className="h-4 w-4" />
+      {/* Header Premium */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/40 dark:bg-gray-800/20 p-4 rounded-2xl backdrop-blur-md border border-white/20 dark:border-gray-800/50 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center text-white shadow-lg transform group-hover:scale-105 transition-transform duration-300">
+              <Store className="h-6 w-6" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full shadow-sm animate-pulse"></div>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-              {store?.name || authStore?.name || 'Mi Tienda'}
-            </h1>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              {(store?.isActive !== false && authStore?.isActive !== false) ? (
-                <Badge variant="outline" className="h-4 text-[8px] border-emerald-500/50 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase">Online</Badge>
-              ) : (
-                <Badge variant="outline" className="h-4 text-[8px] border-red-500/50 text-red-600 dark:text-red-400 px-1 py-0 uppercase">Suspendida</Badge>
-              )}
-              Gestionando pedidos y catálogo
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
+                {store?.name || authStore?.name || 'Mi Tienda'}
+              </h1>
+              <Badge variant="outline" className="h-4 text-[8px] bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-1 py-0 uppercase font-black">Online</Badge>
+            </div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+              Gestionando pedidos y catálogo en tiempo real
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs ring-2 ring-white dark:ring-gray-800">T</div>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-black text-sm ring-2 ring-white dark:ring-gray-800 shadow-sm">
+            {user?.email?.charAt(0).toUpperCase()}
+          </div>
         </div>
       </div>
 
-      {/* Banner de tienda suspendida */}
-      {(store?.isActive === false || authStore?.isActive === false) && (
-        <div className="mb-6 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
-            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-red-800 dark:text-red-300">Tu tienda está suspendida</h3>
-            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-              Tu tienda no es visible para los clientes. Los productos no aparecen en el catálogo público.
-              Contacta al administrador para reactivar tu cuenta.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Grid Minimalist */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard title="Ventas" value={`$${stats.totalSales.toFixed(0)}`} icon={DollarSign} trend="+12%" color="#8b5cf6" />
-        <StatCard title="Margen" value="38%" icon={TrendingUp} trend="+2%" color="#10b981" />
-        <StatCard title="Pedidos" value={orders.length.toString()} icon={ShoppingCart} trend="+5" color="#3b82f6" />
-        <StatCard title="Ticket" value={`$${stats.averageOrderValue.toFixed(0)}`} icon={BarChart3} color="#f59e0b" />
-        <StatCard title="Stock" value={lowStockProducts.toString()} icon={AlertTriangle} alert={lowStockProducts > 0} color="#ef4444" />
-      </div>
-
-      {/* Main Content */}
+      {/* Main Content & Consolidated Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="hidden md:flex w-full overflow-x-auto scrollbar-hide bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-lg justify-start sm:justify-center">
-          <TabsTrigger value="products" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Package className="h-3 w-3 mr-1.5" />Stock</TabsTrigger>
-          <TabsTrigger value="orders" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><ShoppingCart className="h-3 w-3 mr-1.5" />Ventas</TabsTrigger>
-          <TabsTrigger value="flash" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0 relative">
-            <Zap className="h-3 w-3 mr-1.5 text-yellow-500" />Flash
-            {activeFlashOffers.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 text-white text-[8px] rounded-full flex items-center justify-center">
-                {activeFlashOffers.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><Store className="h-3 w-3 mr-1.5" />Configuración</TabsTrigger>
-          <TabsTrigger value="analytics" className="flex-none sm:flex-1 text-[10px] sm:text-xs py-2 px-3 sm:px-0"><BarChart3 className="h-3 w-3 mr-1.5" />Stats</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between bg-gray-100/40 dark:bg-gray-800/20 p-1.5 rounded-2xl backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 shadow-sm overflow-x-auto scrollbar-hide">
+          <TabsList className="bg-transparent border-0 gap-1.5">
+            <TabsTrigger
+              value="products"
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md data-[state=active]:border-gray-200 dark:data-[state=active]:border-gray-700 border border-transparent hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl px-5 py-2.5 text-xs font-bold transition-all"
+            >
+              <Package className="h-3.5 w-3.5 mr-2" />Stock
+            </TabsTrigger>
+            <TabsTrigger
+              value="orders"
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md data-[state=active]:border-gray-200 dark:data-[state=active]:border-gray-700 border border-transparent hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl px-5 py-2.5 text-xs font-bold transition-all"
+            >
+              <ShoppingCart className="h-3.5 w-3.5 mr-2" />Ventas
+            </TabsTrigger>
+            <TabsTrigger
+              value="flash"
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md data-[state=active]:border-gray-200 dark:data-[state=active]:border-gray-700 border border-transparent hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl px-5 py-2.5 text-xs font-bold transition-all"
+            >
+              <Zap className="h-3.5 w-3.5 mr-2 text-yellow-500" />Flash
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md data-[state=active]:border-gray-200 dark:data-[state=active]:border-gray-700 border border-transparent hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl px-5 py-2.5 text-xs font-bold transition-all"
+            >
+              <BarChart3 className="h-3.5 w-3.5 mr-2" />Stats
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              onClick={() => setSettingsTab('general')}
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md data-[state=active]:border-gray-200 dark:data-[state=active]:border-gray-700 border border-transparent hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-xl px-5 py-2.5 text-xs font-bold transition-all"
+            >
+              <Store className="h-3.5 w-3.5 mr-2" />Ajustes
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="products">
+        <TabsContent value="products" className="mt-0">
           <InventoryView
             products={products}
             addProduct={addProduct}
@@ -218,6 +213,7 @@ export default function StoreDashboard() {
                 createFlashOffer={createFlashOffer}
                 cancelFlashOffer={cancelFlashOffer}
                 currentPlan={subscription?.plan || 'free'}
+                onUpgradePrompt={handleFlashUpgrade}
               />
             </CardContent>
           </Card>
@@ -242,6 +238,8 @@ export default function StoreDashboard() {
             subscription={subscription}
             salesThisMonth={subscription?.salesThisMonth || 0}
             productsCount={products.length}
+            defaultTab={settingsTab}
+            key={`settings-${settingsTab}`} // Force re-render/re-init if tab changes
           />
         </TabsContent>
       </Tabs>
@@ -263,7 +261,7 @@ export default function StoreDashboard() {
               {activeFlashOffers.length > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-900"></span>}
             </div>
           </button>
-          <button onClick={() => setActiveTab('settings')} className={`p-2 rounded-xl transition-all ${activeTab === 'settings' ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
+          <button onClick={() => { setSettingsTab('general'); setActiveTab('settings'); }} className={`p-2 rounded-xl transition-all ${activeTab === 'settings' ? 'text-violet-600 bg-violet-50 dark:bg-violet-900/20' : 'text-gray-400'}`}>
             <Store className="h-6 w-6" strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
           </button>
         </div>

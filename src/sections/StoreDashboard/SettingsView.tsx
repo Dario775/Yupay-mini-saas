@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
@@ -49,6 +50,7 @@ interface SettingsViewProps {
     subscription?: Subscription | null;
     salesThisMonth?: number;
     productsCount?: number;
+    defaultTab?: string;
 }
 
 // Plan definitions
@@ -110,10 +112,11 @@ export function SettingsView({
     deletePaymentMethod,
     subscription,
     salesThisMonth = 0,
-    productsCount = 0
+    productsCount = 0,
+    defaultTab = 'general'
 }: SettingsViewProps) {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(defaultTab);
 
     // Profile State
     const [profileData, setProfileData] = useState({
@@ -369,36 +372,89 @@ export function SettingsView({
             {/* Subscription Tab */}
             <TabsContent value="subscription" className="space-y-6">
                 {/* Current Plan Card */}
-                <Card className="bg-gradient-to-br from-violet-600 to-purple-700 text-white border-0 shadow-lg">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-violet-200 text-xs uppercase tracking-wider">Tu plan actual</p>
-                                <h3 className="text-2xl font-bold mt-1 capitalize">{PLANS.find(p => p.id === currentPlan)?.name || 'Gratuito'}</h3>
-                                <p className="text-violet-200 text-sm mt-1">
-                                    {subscription?.status === 'trial' ? 'Período de prueba' : subscription?.status === 'activa' ? 'Activo' : 'Pendiente'}
-                                </p>
-                            </div>
-                            <Crown className="h-12 w-12 text-violet-300" />
-                        </div>
+                {(() => {
+                    const activePlanData = PLANS.find(p => p.id === currentPlan) || PLANS[0];
+                    const ActiveIcon = activePlanData.icon;
+                    const colorClasses = {
+                        gray: 'from-slate-600 to-slate-800 text-slate-50',
+                        blue: 'from-blue-600 to-indigo-700 text-blue-50',
+                        violet: 'from-violet-600 to-purple-700 text-violet-50',
+                        amber: 'from-amber-500 to-orange-600 text-amber-50'
+                    }[activePlanData.color || 'gray'];
 
-                        {/* Usage Stats */}
-                        <div className="grid grid-cols-2 gap-4 mt-6">
-                            <div className="bg-white/10 rounded-lg p-3">
-                                <p className="text-violet-200 text-xs">Ventas este mes</p>
-                                <p className="text-xl font-bold">
-                                    {salesThisMonth} / {PLANS.find(p => p.id === currentPlan)?.maxSales === -1 ? '∞' : PLANS.find(p => p.id === currentPlan)?.maxSales}
-                                </p>
+                    const accentClasses = {
+                        gray: 'bg-white/10 text-slate-200',
+                        blue: 'bg-white/10 text-blue-100',
+                        violet: 'bg-white/10 text-violet-100',
+                        amber: 'bg-white/10 text-amber-100'
+                    }[activePlanData.color || 'gray'];
+
+                    return (
+                        <Card className={`bg-gradient-to-br ${colorClasses} border-0 shadow-xl overflow-hidden relative`}>
+                            {/* Decorative Background Icon */}
+                            <div className="absolute -right-8 -bottom-8 opacity-10 rotate-12">
+                                <ActiveIcon className="h-40 w-40" />
                             </div>
-                            <div className="bg-white/10 rounded-lg p-3">
-                                <p className="text-violet-200 text-xs">Productos</p>
-                                <p className="text-xl font-bold">
-                                    {productsCount} / {PLANS.find(p => p.id === currentPlan)?.maxProducts === -1 ? '∞' : PLANS.find(p => p.id === currentPlan)?.maxProducts}
-                                </p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+
+                            <CardContent className="p-6 relative z-10">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-md">
+                                                <ActiveIcon className="h-4 w-4" />
+                                            </div>
+                                            <p className="opacity-80 text-[10px] font-black uppercase tracking-[0.2em]">Tu plan actual</p>
+                                        </div>
+                                        <h3 className="text-3xl font-black mt-1 capitalize tracking-tight">{activePlanData.name}</h3>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 text-[10px] font-bold py-0 h-5">
+                                                {subscription?.status === 'trial' ? 'En Prueba' : subscription?.status === 'activa' ? 'Cuenta Activa' : 'Pendiente'}
+                                            </Badge>
+                                            {subscription?.status === 'trial' && (
+                                                <span className="text-xs font-medium opacity-80">
+                                                    Quedan {Math.max(0, Math.ceil(((subscription?.trialEndDate?.getTime() || 0) - Date.now()) / (1000 * 60 * 60 * 24)))} días
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 shadow-inner">
+                                        <ActiveIcon className="h-10 w-10 text-white drop-shadow-lg" />
+                                    </div>
+                                </div>
+
+                                {/* Usage Stats Grid */}
+                                <div className="grid grid-cols-2 gap-4 mt-8">
+                                    <div className={`${accentClasses} backdrop-blur-md rounded-2xl p-4 border border-white/5`}>
+                                        <p className="opacity-70 text-[10px] font-bold uppercase tracking-wider mb-1">Ventas este mes</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-2xl font-black">{salesThisMonth}</span>
+                                            <span className="text-xs opacity-60">/ {activePlanData.maxSales === -1 ? '∞' : activePlanData.maxSales}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-black/10 rounded-full mt-2 overflow-hidden">
+                                            <div
+                                                className="h-full bg-white rounded-full transition-all duration-1000"
+                                                style={{ width: `${activePlanData.maxSales === -1 ? 0 : Math.min(100, (salesThisMonth / activePlanData.maxSales) * 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={`${accentClasses} backdrop-blur-md rounded-2xl p-4 border border-white/5`}>
+                                        <p className="opacity-70 text-[10px] font-bold uppercase tracking-wider mb-1">Productos</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-2xl font-black">{productsCount}</span>
+                                            <span className="text-xs opacity-60">/ {activePlanData.maxProducts === -1 ? '∞' : activePlanData.maxProducts}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-black/10 rounded-full mt-2 overflow-hidden">
+                                            <div
+                                                className="h-full bg-white rounded-full transition-all duration-1000"
+                                                style={{ width: `${activePlanData.maxProducts === -1 ? 0 : Math.min(100, (productsCount / activePlanData.maxProducts) * 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
 
                 {/* Available Plans */}
                 <div>
@@ -412,66 +468,80 @@ export function SettingsView({
                             return (
                                 <Card
                                     key={plan.id}
-                                    className={`relative overflow-hidden transition-all ${isCurrentPlan
-                                        ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20'
-                                        : 'bg-white dark:bg-gray-900 hover:shadow-lg'
-                                        } ${plan.popular ? 'ring-2 ring-amber-400' : ''}`}
+                                    className={`relative overflow-hidden transition-all duration-300 ${isCurrentPlan
+                                        ? 'ring-4 ring-violet-500 shadow-xl scale-[1.02] bg-violet-50/50 dark:bg-violet-900/20 z-10'
+                                        : 'bg-white dark:bg-gray-900 hover:shadow-md border border-gray-200 dark:border-gray-800 opacity-90 hover:opacity-100'
+                                        }`}
                                 >
-                                    {plan.popular && (
-                                        <div className="absolute top-0 right-0 bg-amber-400 text-xs font-bold px-2 py-1 rounded-bl-lg">
-                                            POPULAR
+                                    {isCurrentPlan && (
+                                        <div className="absolute top-0 left-0 bg-violet-600 text-white text-[10px] font-black px-3 py-1 rounded-br-lg shadow-lg flex items-center gap-1 z-20">
+                                            <Check className="h-3 w-3 stroke-[4]" />
+                                            TU PLAN
                                         </div>
                                     )}
-                                    <CardContent className="p-4">
-                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.color === 'gray' ? 'bg-gray-100 text-gray-600' :
-                                            plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                                                plan.color === 'violet' ? 'bg-violet-100 text-violet-600' :
-                                                    'bg-amber-100 text-amber-600'
-                                            }`}>
-                                            <Icon className="h-5 w-5" />
+                                    {plan.popular && !isCurrentPlan && (
+                                        <div className={`absolute top-0 right-0 ${plan.color === 'blue' ? 'bg-blue-500' :
+                                            plan.color === 'violet' ? 'bg-violet-500' :
+                                                plan.color === 'amber' ? 'bg-amber-500' : 'bg-gray-500'
+                                            } text-white text-[10px] font-black px-3 py-1 rounded-bl-lg shadow-sm uppercase tracking-tighter`}>
+                                            MÁS POPULAR
+                                        </div>
+                                    )}
+                                    <CardContent className="p-5 pt-8 flex flex-col h-full">
+                                        <div className="flex-1">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-sm ${plan.color === 'gray' ? 'bg-gray-100 text-gray-600' :
+                                                plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
+                                                    plan.color === 'violet' ? 'bg-violet-100 text-violet-600' :
+                                                        'bg-amber-100 text-amber-600'
+                                                }`}>
+                                                <Icon className="h-6 w-6" />
+                                            </div>
+
+                                            <h4 className="text-xl font-bold text-gray-900 dark:text-white">{plan.name}</h4>
+                                            <div className="mt-2 flex items-baseline gap-1">
+                                                <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                                    {plan.price === 0 ? 'Gratis' : formatPrice(plan.price)}
+                                                </span>
+                                                {plan.price > 0 && <span className="text-gray-500 text-xs font-medium">/mes</span>}
+                                            </div>
+
+                                            <ul className="mt-6 space-y-3">
+                                                {plan.features.map((feature, i) => (
+                                                    <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                                                        <div className={`mt-0.5 rounded-full p-0.5 ${isCurrentPlan ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                                                            <Check className={`h-3 w-3 ${isCurrentPlan ? 'text-green-600' : 'text-gray-500'}`} />
+                                                        </div>
+                                                        <span className="leading-tight">{feature}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         </div>
 
-                                        <h4 className="font-bold text-gray-900 dark:text-white">{plan.name}</h4>
-                                        <div className="mt-2">
-                                            <span className="text-2xl font-bold dark:text-white">
-                                                {plan.price === 0 ? 'Gratis' : formatPrice(plan.price)}
-                                            </span>
-                                            {plan.price > 0 && <span className="text-gray-500 text-sm">/mes</span>}
-                                        </div>
-
-                                        <ul className="mt-4 space-y-2">
-                                            {plan.features.map((feature, i) => (
-                                                <li key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                    <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-
-                                        <div className="mt-4">
+                                        <div className="mt-8 flex justify-center">
                                             {isCurrentPlan ? (
-                                                <Button disabled className="w-full" variant="outline">
-                                                    Tu plan actual
+                                                <Button disabled className="w-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border-2 border-violet-200 dark:border-violet-800 font-bold opacity-100 cursor-default shadow-sm py-6">
+                                                    <CheckCircle className="h-5 w-5 mr-2" />
+                                                    Plan Activo
                                                 </Button>
                                             ) : isDowngrade ? (
-                                                <Button disabled variant="ghost" className="w-full text-gray-400">
+                                                <Button disabled variant="ghost" className="w-full text-gray-400 py-6">
                                                     Plan inferior
                                                 </Button>
                                             ) : (
                                                 <Button
-                                                    className={`w-full ${plan.color === 'violet'
-                                                        ? 'bg-violet-600 hover:bg-violet-700'
+                                                    className={`w-full py-6 font-bold shadow-md transition-all active:scale-95 ${plan.color === 'violet'
+                                                        ? 'bg-violet-600 hover:bg-violet-700 shadow-violet-200 dark:shadow-none'
                                                         : plan.color === 'amber'
-                                                            ? 'bg-amber-500 hover:bg-amber-600'
-                                                            : 'bg-blue-600 hover:bg-blue-700'
-                                                        } text-white`}
+                                                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200 dark:shadow-none'
+                                                            : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none'
+                                                        } text-white flex items-center justify-center gap-2`}
                                                     onClick={() => handlePlanUpgrade(plan.id)}
                                                     disabled={isUpgrading}
                                                 >
                                                     {isUpgrading && selectedUpgradePlan === plan.id ? (
-                                                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando...</>
+                                                        <><Loader2 className="h-5 w-5 animate-spin" /> Procesando...</>
                                                     ) : (
-                                                        <>Mejorar a {plan.name} <ArrowRight className="h-4 w-4 ml-1" /></>
+                                                        <>Mejorar a {plan.name} <ArrowRight className="h-5 w-5" /></>
                                                     )}
                                                 </Button>
                                             )}

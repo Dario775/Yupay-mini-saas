@@ -220,167 +220,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
     console.log('✅ Basic user set and UI released:', basicUser.email, 'Role:', basicUser.role);
 
+    // Proceso de carga en PARALELO para máxima velocidad
     try {
-      // Ahora intentamos enriquecer con datos de la BD
-      // 1. Cargar perfil básico
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // 1. Lanzamos todas las peticiones a la vez
+      const [profileResult, storesResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('stores').select('*').eq('owner_id', userId)
+      ]);
 
-      let profile = profileData;
-      let effectiveRole = basicUser.role;
+      const { data: profileData } = profileResult;
+      const { data: allStores } = storesResult;
 
-      if (profileError) {
-        console.warn('⚠️ No profile found in DB, using basic auth data');
-        profile = null;
-      } else if (profile) {
-        // Actualizar usuario con datos del perfil de BD
-        effectiveRole = isGlobalAdmin ? 'admin' : (profile.role as UserRole);
+      let effectiveRole = profileData?.role || basicUser.role;
+      if (isGlobalAdmin) effectiveRole = 'admin';
 
-        // 3. SIEMPRE intentar cargar tienda del dueño
-        // Intentamos obtener todas las tiendas del dueño para evitar errores de duplicidad con maybeSingle()
-        const { data: allStores, error: allStoresError } = await supabase
-          .from('stores')
-          .select('*')
-          .eq('owner_id', userId);
+      let storeData = allStores && allStores.length > 0 ? allStores[0] : null;
 
-        // Si hay error de red o permisos, lo logueamos
-        if (allStoresError) {
-          console.error('❌ loadUserProfile: Error fetching stores:', allStoresError);
-        }
-
-        // Tomamos la primera tienda disponible
-        let storeData = allStores && allStores.length > 0 ? allStores[0] : null;
-
-        if (allStores && allStores.length > 1) {
-          console.warn(`⚠️ loadUserProfile: User ${userId} has ${allStores.length} stores. Using the first one found.`);
-        }
-
-        if (storeData && effectiveRole !== 'admin') {
-          effectiveRole = 'tienda';
-        } else if (effectiveRole === 'tienda' && !storeData && !isGlobalAdmin) {
-          // C. RECUPERACIÓN DE TIENDA:
-          // Solo si REALMENTE no hay ninguna tienda en la base de datos
-          const { data: { user: authUserObj } } = await supabase.auth.getUser();
-          const metadata = authUserObj?.user_metadata;
-
-          if (metadata?.store_name) {
-            try {
-              // Crear tienda tardía
-              const { data: newStore, error: newStoreErr } = await supabase.from('stores').insert({
-                owner_id: userId,
-                name: metadata.store_name,
-                category: metadata.store_category || 'General',
-                email: authUserObj?.email,
-                phone: metadata.phone || null,
-                is_active: true,
-              }).select().single();
-
-              if (newStore && !newStoreErr) {
-                // Crear suscripción tardía
-                const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 14);
-                const endDate = new Date(); endDate.setFullYear(endDate.getFullYear() + 1);
-
-                await supabase.from('subscriptions').insert({
-                  user_id: userId,
-                  store_id: newStore.id,
-                  plan: 'profesional',
-                  status: 'trial',
-                  price: 0,
-                  start_date: new Date().toISOString(),
-                  end_date: endDate.toISOString(),
-                  trial_end_date: trialEnd.toISOString(),
-                  auto_renew: false,
-                  sales_this_month: 0,
-                  last_reset_date: new Date().toISOString(),
-                });
-
-                // Actualizar variables locales para que la UI se refresque inmediatamente
-                storeData = newStore;
-              }
-            } catch (recoveryErr) {
-              console.error('❌ Error in deferred store creation:', recoveryErr);
-            }
-          }
-        }
-
-        const loadedUser: User = {
-          id: profile?.id || userId,
-          email: profile?.email || authEmail,
-          name: profile?.name || basicUser.name,
-          role: effectiveRole,
-          avatar: profile?.avatar || basicUser.avatar,
-          phone: profile?.phone || basicUser.phone,
-          createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
-          isActive: profile?.is_active ?? true,
-        };
-
-        // Actualizar usuario con datos enriquecidos
-        setUser(loadedUser);
-        console.log('✅ Enriched user set:', loadedUser.email, 'Role:', loadedUser.role);
-
-        // 4. Si tiene tienda (o la acabamos de crear), cargar datos completos
-        if (storeData) {
-          setStore({
-            id: storeData.id,
-            ownerId: storeData.owner_id,
-            name: storeData.name,
-            description: storeData.description,
-            category: storeData.category,
-            address: storeData.address,
-            phone: storeData.phone,
-            email: storeData.email,
-            logo: storeData.logo,
-            banner: storeData.banner,
-            isActive: storeData.is_active,
-            rating: parseFloat(storeData.rating) || 0,
-            createdAt: new Date(storeData.created_at),
-            location: storeData.latitude && storeData.longitude ? {
-              lat: parseFloat(storeData.latitude),
-              lng: parseFloat(storeData.longitude),
-              address: storeData.address || '',
-              locality: storeData.locality,
-              province: storeData.province,
-            } : undefined,
-          });
-
-          // Cargar suscripción
-          // Cargar suscripción de forma segura (usamos limit(1) por si hay duplicados residuales)
-          try {
-            const { data: subsData, error: subsError } = await supabase
-              .from('subscriptions')
-              .select('*')
-              .eq('store_id', storeData.id)
-              .limit(1);
-
-            if (subsError) {
-              console.error('⚠️ Error fetching subscription:', subsError);
-            } else if (subsData && subsData.length > 0) {
-              const subData = subsData[0];
-              setSubscription({
-                id: subData.id,
-                userId: subData.user_id,
-                storeId: subData.store_id,
-                plan: subData.plan,
-                status: subData.status,
-                startDate: new Date(subData.start_date),
-                endDate: subData.end_date ? new Date(subData.end_date) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year if missing
-                trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
-                price: parseFloat(subData.price) || 0,
-                autoRenew: subData.auto_renew,
-                salesThisMonth: subData.sales_this_month || 0,
-                lastResetDate: new Date(subData.last_reset_date),
-                createdAt: new Date(subData.created_at),
-              });
-            }
-          } catch (subErr) {
-            console.error('❌ Failed to process subscription data:', subErr);
-          }
-        }
-        console.log('✅ loadUserProfile completed successfully');
+      // Si tiene tienda y no es admin, forzamos rol tienda para el dashboard correcto
+      if (storeData && effectiveRole !== 'admin') {
+        effectiveRole = 'tienda';
       }
+
+      // Actualizar usuario enriquecido
+      const loadedUser: User = {
+        id: userId,
+        email: profileData?.email || authEmail,
+        name: profileData?.name || basicUser.name,
+        role: effectiveRole as UserRole,
+        avatar: profileData?.avatar || basicUser.avatar,
+        phone: profileData?.phone || basicUser.phone,
+        createdAt: profileData?.created_at ? new Date(profileData.created_at) : new Date(),
+        isActive: profileData?.is_active ?? true,
+      };
+
+      setUser(loadedUser);
+      console.log('✅ Enriched user set:', loadedUser.email, 'Role:', loadedUser.role);
+
+      // 4. Si tiene tienda (o la acabamos de crear), cargar datos completos
+      if (storeData) {
+        setStore({
+          id: storeData.id,
+          ownerId: storeData.owner_id,
+          name: storeData.name,
+          description: storeData.description,
+          category: storeData.category,
+          address: storeData.address,
+          phone: storeData.phone,
+          email: storeData.email,
+          logo: storeData.logo,
+          banner: storeData.banner,
+          isActive: storeData.is_active,
+          rating: parseFloat(storeData.rating) || 0,
+          createdAt: new Date(storeData.created_at),
+          location: storeData.latitude && storeData.longitude ? {
+            lat: parseFloat(storeData.latitude),
+            lng: parseFloat(storeData.longitude),
+            address: storeData.address || '',
+            locality: storeData.locality,
+            province: storeData.province,
+          } : undefined,
+        });
+
+        // Cargar suscripción
+        // Cargar suscripción de forma segura (usamos limit(1) por si hay duplicados residuales)
+        try {
+          const { data: subsData, error: subsError } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('store_id', storeData.id)
+            .limit(1);
+
+          if (subsError) {
+            console.error('⚠️ Error fetching subscription:', subsError);
+          } else if (subsData && subsData.length > 0) {
+            const subData = subsData[0];
+            setSubscription({
+              id: subData.id,
+              userId: subData.user_id,
+              storeId: subData.store_id,
+              plan: subData.plan,
+              status: subData.status,
+              startDate: new Date(subData.start_date),
+              endDate: subData.end_date ? new Date(subData.end_date) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year if missing
+              trialEndDate: subData.trial_end_date ? new Date(subData.trial_end_date) : undefined,
+              price: parseFloat(subData.price) || 0,
+              autoRenew: subData.auto_renew,
+              salesThisMonth: subData.sales_this_month || 0,
+              lastResetDate: new Date(subData.last_reset_date),
+              createdAt: new Date(subData.created_at),
+            });
+          }
+        } catch (subErr) {
+          console.error('❌ Failed to process subscription data:', subErr);
+        }
+      }
+      console.log('✅ loadUserProfile completed successfully');
     } catch (error) {
       console.error('❌ Critical error in loadUserProfile:', error);
       // El usuario básico ya fue asignado, así que la sesión no se pierde
