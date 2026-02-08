@@ -37,7 +37,7 @@ import { toast } from 'sonner';
 interface AdminStoresViewProps {
     stores: StoreType[];
     users: User[];
-    addStore: (data: any) => StoreType;
+    addStore: (data: any) => Promise<StoreType | null>;
     updateStore: (id: string, updates: Partial<StoreType>) => void;
     updateStoreStatus: (id: string, isActive: boolean) => void;
     deleteStore: (id: string) => void;
