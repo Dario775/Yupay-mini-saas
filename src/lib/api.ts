@@ -128,6 +128,38 @@ export const adminApi = {
         console.log('✅ User deleted successfully');
     },
 
+    async addSubscription(subscription: any) {
+        console.log('📅 Adding subscription:', subscription);
+
+        // Map camelCase to snake_case for Supabase
+        const dbSubscription = {
+            user_id: subscription.userId,
+            store_id: subscription.storeId,
+            plan: subscription.plan,
+            status: subscription.status,
+            start_date: subscription.startDate,
+            end_date: subscription.endDate,
+            trial_end_date: subscription.trialEndDate,
+            price: subscription.price,
+            auto_renew: subscription.autoRenew,
+            sales_this_month: subscription.salesThisMonth || 0,
+            last_reset_date: subscription.lastResetDate || new Date()
+        };
+
+        const { data, error } = await supabase
+            .from('subscriptions')
+            .insert([dbSubscription])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error adding subscription:', error);
+            throw error;
+        }
+        console.log('✅ Subscription added successfully');
+        return data;
+    },
+
     async deleteSubscription(id: string) {
         console.log('🗑️ Deleting subscription:', id);
         const { error } = await supabase
