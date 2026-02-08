@@ -78,7 +78,7 @@ export function AdminStoresView({
         return password;
     };
 
-    const handleCreateStore = () => {
+    const handleCreateStore = async () => {
         if (!newStoreForm.name || !newStoreForm.email) {
             toast.error('Nombre y Email son requeridos');
             return;
@@ -90,20 +90,42 @@ export function AdminStoresView({
                 toast.error('Nombre de propietario y contraseña son requeridos');
                 return;
             }
+            // TODO: Implement real user creation via Edge Function
+            // For now, only local optimistic update which will fail DB constraints
             const newUser = addUser({ name: newStoreForm.ownerName, email: newStoreForm.email, role: 'tienda', isActive: true });
+            /* 
+               WARNING: In a real app with Supabase, addUser needs to call an Edge Function 
+               to create the user in auth.users. The current addUser is local-only 
+               and returns a dummy ID, which will cause the store creation to fail 
+               due to foreign key constraints.
+               
+               For this demo, we should recommend using an EXISTING user.
+            */
             ownerId = newUser.id;
-            toast.success(`Usuario creado: ${newStoreForm.email} / ${newStoreForm.password}`, { duration: 10000 });
+
+            // If we are strictly checking for real IDs, this block should probably warn the user
+            toast.warning('Creación de usuario real requiere Backend. Usando ID temporal (fallará en BD). Usa usuario existente.');
         }
 
-        const newStore = addStore({ ...newStoreForm, ownerId });
-        addSubscription({ userId: ownerId, storeId: newStore.id, plan: newStoreForm.plan, months: 12 });
+        try {
+            const newStore = await addStore({ ...newStoreForm, ownerId });
 
-        toast.success('Tienda creada exitosamente');
-        setShowNewStore(false);
-        setNewStoreForm({
-            name: '', description: '', category: '', address: '', phone: '', email: '', ownerId: '', isActive: true,
-            createNewUser: true, ownerName: '', password: '', plan: 'profesional',
-        });
+            if (newStore) {
+                // Only add subscription if store was created successfully
+                addSubscription({ userId: ownerId, storeId: newStore.id, plan: newStoreForm.plan, months: 12 });
+
+                toast.success('Tienda creada exitosamente');
+                setShowNewStore(false);
+                setNewStoreForm({
+                    name: '', description: '', category: '', address: '', phone: '', email: '', ownerId: '', isActive: true,
+                    createNewUser: false, // Reset to false to encourage selecting existing user
+                    ownerName: '', password: '', plan: 'profesional',
+                });
+            }
+        } catch (error) {
+            console.error('Error in handleCreateStore:', error);
+            // Toast is handled in addStore
+        }
     };
 
     const handleEditStoreSubmit = () => {

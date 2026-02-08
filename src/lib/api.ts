@@ -149,6 +149,31 @@ export const adminApi = {
             .order('created_at', { ascending: false });
         if (error) throw error;
         return data;
+    },
+
+    async createStore(store: {
+        owner_id: string;
+        name: string;
+        description?: string;
+        category?: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        is_active?: boolean;
+    }) {
+        console.log('🏪 Creating store:', store);
+        const { data, error } = await supabase
+            .from('stores')
+            .insert([store])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error creating store:', error);
+            throw error;
+        }
+        console.log('✅ Store created:', data);
+        return data;
     }
 };
 
