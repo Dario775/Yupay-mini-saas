@@ -341,49 +341,7 @@ export function useAdminData() {
     }
   }, []);
 
-  // CRUD Tiendas
-  const addStore = useCallback(async (data: Omit<Store, 'id' | 'createdAt' | 'rating'>) => {
-    // 1. Optimistic update (with temporary ID)
-    const tempId = `store_${Date.now()}`;
-    const newStore: Store = { ...data, id: tempId, rating: 0, createdAt: new Date() };
-    setStores(prev => [newStore, ...prev]);
 
-    // 2. Persist to Supabase
-    if (isSupabaseConfigured) {
-      try {
-        const dbStore = await adminApi.createStore({
-          owner_id: data.ownerId,
-          name: data.name,
-          description: data.description,
-          category: data.category,
-          address: data.address,
-          phone: data.phone,
-          email: data.email,
-          is_active: data.isActive
-        });
-
-        if (dbStore) {
-          // Update temp ID with real ID
-          setStores(prev => prev.map(s => s.id === tempId ? {
-            ...s,
-            id: dbStore.id,
-            createdAt: new Date(dbStore.created_at)
-          } : s));
-
-          toast.success('Tienda creada exitosamente');
-          return { ...newStore, id: dbStore.id };
-        }
-      } catch (err) {
-        console.error('Error creating store in Supabase:', err);
-        toast.error('Error al crear la tienda');
-        // Rollback
-        setStores(prev => prev.filter(s => s.id !== tempId));
-        return null;
-      }
-    }
-
-    return newStore;
-  }, []);
 
   const updateStore = useCallback(async (id: string, updates: Partial<Store>) => {
     setStores(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
@@ -482,7 +440,7 @@ export function useAdminData() {
     stats, subscriptions, stores, users, orders, planLimits,
     updatePlanLimits,
     addSubscription, updateSubscription, updateSubscriptionStatus, upgradePlan, deleteSubscription,
-    addStore, updateStore, updateStoreStatus, deleteStore,
+    updateStore, updateStoreStatus, deleteStore,
     addUser, updateUser, updateUserStatus, deleteUser,
   };
 }

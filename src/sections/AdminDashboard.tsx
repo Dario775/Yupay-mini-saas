@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   const {
     stats, subscriptions, stores, users, planLimits,
     addSubscription, updateSubscriptionStatus, deleteSubscription,
-    addStore, updateStore, updateStoreStatus, deleteStore,
+    updateStore, updateStoreStatus, deleteStore,
     addUser, updateUserStatus, deleteUser,
     updatePlanLimits
   } = useAdminData();
@@ -124,13 +124,9 @@ export default function AdminDashboard() {
         <TabsContent value="stores">
           <AdminStoresView
             stores={stores}
-            users={users}
-            addStore={addStore}
             updateStore={updateStore}
             updateStoreStatus={updateStoreStatus}
             deleteStore={deleteStore}
-            addUser={addUser}
-            addSubscription={addSubscription}
             planLimits={planLimits}
           />
         </TabsContent>
