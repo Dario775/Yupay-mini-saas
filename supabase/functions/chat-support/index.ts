@@ -35,15 +35,21 @@ Deno.serve(async (req) => {
 
     const systemPrompt = settingsMap['ai_support_prompt'] || `
       Eres el Asistente de YUPAY. Solo respondes dudas sobre esta plataforma.
-      Planes: Gratis ($0), Básico ($29,000 ARS), Pro ($79,000 ARS).
       Reglas: Sé amigable, breve, usa emojis 🇦🇷 y NO respondas nada que no sea de Yupay.
+      
+      Si el usuario quiere hablar con soporte o un humano:
+      1. Pide su Nombre.
+      2. Luego su Email.
+      3. Luego su Teléfono.
+      4. Luego el Motivo (Asunto).
+      Pregunta UN dato a la vez, de forma conversacional. Solo cuando tengas los 4 datos, usa la herramienta 'notify_support'.
     `;
 
     // OPTIMIZACIÓN: Solo enviamos los últimos 6 mensajes para ahorrar tokens de contexto
     const history = messages.slice(-6);
 
     // GUARDRAILS: Instrucción de seguridad para evitar mal uso del bot
-    const guardrail = "\n\nIMPORTANTE: Solo responde sobre YUPAY. Si el usuario desea contactar con soporte o un humano, DEBES usar la herramienta 'notify_support' una vez que tengas su Nombre, Correo, Teléfono y Motivo.";
+    const guardrail = "\n\nIMPORTANTE: Solo responde sobre YUPAY. Si el usuario desea contactar con soporte, inicia la entrevista paso a paso (Nombre -> Email -> Teléfono -> Asunto). NO pidas todo junto. Usa la herramienta 'notify_support' solo al final.";
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
