@@ -39,6 +39,7 @@ export interface PlanLimits {
   hasFlashOffers: boolean;
   maxFlashOffersPerMonth: number; // -1 = ilimitado
   maxFlashOfferRadius: number;    // Radio máximo en km
+  hasDynamicPayments: boolean;    // Integration with MercadoPago/etc.
   price: number;
 }
 
@@ -53,6 +54,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasFlashOffers: false,
     maxFlashOffersPerMonth: 0,
     maxFlashOfferRadius: 0,
+    hasDynamicPayments: false,
     price: 0,
   },
   basico: {
@@ -65,6 +67,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasFlashOffers: false,
     maxFlashOffersPerMonth: 0,
     maxFlashOfferRadius: 0,
+    hasDynamicPayments: false,
     price: 9.99,
   },
   profesional: {
@@ -77,6 +80,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasFlashOffers: true,
     maxFlashOffersPerMonth: 2,
     maxFlashOfferRadius: 5,
+    hasDynamicPayments: true,
     price: 29.99,
   },
   empresarial: {
@@ -89,9 +93,19 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     hasFlashOffers: true,
     maxFlashOffersPerMonth: -1, // Ilimitado
     maxFlashOfferRadius: 20,
+    hasDynamicPayments: true,
     price: 99.99,
   },
 };
+
+export interface StorePaymentConfig {
+  id: string;
+  storeId: string;
+  provider: 'mercadopago';
+  accessToken: string; // Only for input/saving, generally not returned unless masked
+  publicKey?: string;
+  isActive: boolean;
+}
 
 export interface Subscription {
   id: string;

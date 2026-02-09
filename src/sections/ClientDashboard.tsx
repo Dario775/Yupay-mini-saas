@@ -44,6 +44,7 @@ import { OrdersView } from './ClientDashboard/OrdersView';
 import { FavoritesView } from './ClientDashboard/FavoritesView';
 import { ProfileView } from './ClientDashboard/ProfileView';
 import { ProductDetailModal } from './ClientDashboard/components/ProductDetailModal';
+import { CheckoutModal } from './ClientDashboard/components/CheckoutModal';
 
 import { useAuth } from '@/hooks/useAuth';
 import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
@@ -70,6 +71,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState<string | null>(null);
@@ -190,18 +192,14 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-    const storeId = cart[0].product.storeId;
-    const items = cart.map(item => ({
-      productId: item.product.id,
-      productName: item.product.name,
-      quantity: item.quantity,
-      unitPrice: item.product.price,
-      total: item.product.price * item.quantity,
-    }));
-    createOrder(storeId, items, 'Calle Cliente 789, Ciudad');
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleOrderCreated = () => {
     toast.success('¡Pedido realizado exitosamente!');
     setCart([]);
-    setIsCartOpen(false);
+    setIsCheckoutOpen(false);
   };
 
   const handleCancelOrder = (orderId: string) => {
@@ -352,6 +350,17 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
         isFavorite={selectedProduct ? isFavorite(selectedProduct.id) : false}
         stores={stores}
         onShare={handleShareProduct}
+      />
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cart={cart}
+        store={cart.length > 0 ? stores.find(s => s.id === cart[0].product.storeId) || null : null}
+        user={user}
+        total={cartTotal}
+        onOrderCreated={handleOrderCreated}
       />
 
     </div>

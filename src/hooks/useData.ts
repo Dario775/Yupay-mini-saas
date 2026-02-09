@@ -22,10 +22,10 @@ import type {
 
 // Configuración de planes (con flash offers)
 const PLAN_LIMITS = {
-  free: { maxSalesPerMonth: 5, maxProducts: 10, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 0 },
-  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, price: 5000 },
-  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, hasFlashOffers: true, maxFlashOffersPerMonth: 2, maxFlashOfferRadius: 5, price: 15000 },
-  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, hasFlashOffers: true, maxFlashOffersPerMonth: -1, maxFlashOfferRadius: 20, price: 45000 },
+  free: { maxSalesPerMonth: 5, maxProducts: 10, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, hasDynamicPayments: false, price: 0 },
+  basico: { maxSalesPerMonth: 50, maxProducts: 100, maxStores: 1, hasFlashOffers: false, maxFlashOffersPerMonth: 0, maxFlashOfferRadius: 0, hasDynamicPayments: false, price: 5000 },
+  profesional: { maxSalesPerMonth: 500, maxProducts: 1000, maxStores: 3, hasFlashOffers: true, maxFlashOffersPerMonth: 2, maxFlashOfferRadius: 5, hasDynamicPayments: true, price: 15000 },
+  empresarial: { maxSalesPerMonth: -1, maxProducts: -1, maxStores: 10, hasFlashOffers: true, maxFlashOffersPerMonth: -1, maxFlashOfferRadius: 20, hasDynamicPayments: true, price: 45000 },
 };
 
 // Datos de demostración - Usuarios (vacío para producción)
@@ -795,6 +795,7 @@ export function useStoreData(storeId: string) {
 
   const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt'>) => {
     if (!canAddProduct) return null;
+    if (!canAddProduct) return null;
 
     // 1. Optimistic update
     const tempId = `prod${Date.now()}`;
@@ -1047,6 +1048,26 @@ export function useStoreData(storeId: string) {
     ));
   }, []);
 
+  // Guardar configuración de pagos
+  const savePaymentConfig = useCallback(async (provider: 'mercadopago', accessToken: string, publicKey?: string) => {
+    if (isSupabaseConfigured) {
+      try {
+        await storeApi.savePaymentConfig({
+          storeId,
+          provider,
+          accessToken,
+          publicKey
+        });
+        toast.success('Configuración de pagos guardada');
+      } catch (err) {
+        console.error('Error saving payment config:', err);
+        toast.error('Error al guardar configuración de pagos');
+      }
+    } else {
+      toast.success('Simulación: Pagos configurados (Demo)');
+    }
+  }, [storeId, isSupabaseConfigured]);
+
   // Obtener ofertas activas
   const activeFlashOffers = flashOffers.filter(o => o.status === 'active');
 
@@ -1055,6 +1076,7 @@ export function useStoreData(storeId: string) {
     stats, products, orders, subscription, pendingOrders, lowStockProducts, planLimits,
     isLimitReached, canAddProduct, isOnTrial, trialDaysRemaining,
     addProduct, updateProduct, deleteProduct, updateOrderStatus, updateStock, recordSale, upgradePlan,
+    savePaymentConfig,
     // Métodos de envío
     shippingMethods, addShippingMethod, updateShippingMethod, deleteShippingMethod,
     // Métodos de pago

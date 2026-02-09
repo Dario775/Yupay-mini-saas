@@ -22,51 +22,64 @@ Deno.serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all settings at once for efficiency
-    const { data: allSettings, error: dbError } = await supabase
-      .from('platform_settings')
-      .select('key, value');
+    // Fetch all settings and plan configs for efficiency
+    const [settingsResult, plansResult] = await Promise.all([
+      supabase.from('platform_settings').select('key, value'),
+      supabase.from('plan_configs').select('*')
+    ]);
 
-    if (dbError) console.warn("Error fetching settings:", dbError);
+    const allSettings = settingsResult.data;
+    const allPlans = plansResult.data; // Dynamic pricing source
+
+    if (settingsResult.error) console.warn("Error fetching settings:", settingsResult.error);
 
     const settingsMap = Object.fromEntries(
       (allSettings || []).map((s: { key: string; value: string }) => [s.key, s.value])
     );
 
-    const systemPrompt = settingsMap['ai_support_prompt'] || `
-      Eres el Asistente de YUPAY. Solo respondes dudas sobre esta plataforma.
-      Reglas: Sé amigable, breve, usa emojis 🇦🇷 y NO respondas nada que no sea de Yupay.
+    // Build dynamic pricing text
+    let pricingText = "";
+    if (allPlans && allPlans.length > 0) {
+      pricingText = allPlans.map((p: any) =>
+        `- Plan ${p.id.charAt(0).toUpperCase() + p.id.slice(1)}: $${p.price} (ARS) - ${p.max_products === -1 ? 'Productos ilimitados' : 'Hasta ' + p.max_products + ' productos'}`
+      ).join('\n        ');
+    } else {
+      // Fallback if DB fetch fails
+      pricingText = `
+        - Básico: $5,000 ARS.
+        - Profesional: $15,000 ARS.
+        - Empresarial: $45,000 ARS.
+      `;
+    }
+
+    let basePrompt = settingsMap['ai_support_prompt'] || `
+      Eres el Asistente Inteligente de YUPAY.
+      Tu objetivo es ayudar a clientes y dueños de tiendas de forma rápida y amable.
       
       CONOCIMIENTOS CLAVE:
-      - PARA CLIENTES (USUARIOS): 
-        * Pedidos: Se reclaman directamente con la tienda por WhatsApp desde su perfil.
-        * Ubicación: Yupay es geolocalizado; las tiendas aparecen según la cercanía del usuario.
-        * Tiendas: Puedes ver perfiles, horarios y catálogos en yupay.com.ar.
+      - PLATAFORMA: Yupay permite a cualquier comercio crear su tienda online en segundos.
+      - UBICACIÓN: Somos una app geolocalizada.
+      - PAGOS: Los clientes pueden pagar ONLINE (MercadoPago) o acordar con la tienda (WhatsApp/Efectivo) directamente desde el carrito.
       
-      - PARA TIENDAS (DUEÑOS):
-        * Facturación: Mira y gestiona tus suscripciones en 'Configuración' -> 'Ajustes' del Dashboard.
-        * Planes: Gratis, Básico ($29,000 ARS), Pro ($79,000 ARS).
-        * Gestión: Pueden subir productos y manejar stock 100% desde el celular.
+      PRECIOS ACTUALIZADOS (ARS):
+      {{PRICING_PLACEHOLDER}}
 
-      ---
-      MODO ENTREVISTA (Lead Generation):
-      Si el usuario quiere hablar con soporte o un humano, DEBES recolectar estos 4 datos en orden:
-      1. Nombre completo.
-      2. Correo electrónico.
-      3. Teléfono de contacto (¡OBLIGATORIO, NO SALTEAR!).
-      4. Asunto o motivo.
-      
-      REGLAS CRÍTICAS:
-      - Pregunta un solo dato por mensaje.
-      - NO uses la herramienta 'notify_support' hasta tener los 4 datos confirmados.
-      - Si el correo tiene un formato extraño, pide confirmación.
+      SOPORTE HUMANO:
+      Si alguien pide hablar con soporte, un humano o tiene un problema técnico:
+      1. Pide su Nombre, Email, Teléfono y Motivo.
+      2. Usa la herramienta 'notify_support' para enviarnos el caso.
     `;
+
+    // Inject dynamic pricing overriding any static/old pricing in the prompt
+    // We append it or replace a placeholder if it existed, but to be safe we'll inject it clearly.
+    const systemPrompt = basePrompt.replace('{{PRICING_PLACEHOLDER}}', pricingText) +
+      `\n\n[INFO ACTUALIZADA DEL SISTEMA]:\nPrecios vigentes: \n${pricingText}\n\nIMPORTANTE: Usa ESTOS precios, ignora cualquier otro precio anterior.`;
 
     // OPTIMIZACIÓN: Solo enviamos los últimos 6 mensajes para ahorrar tokens de contexto
     const history = messages.slice(-6);
 
-    // GUARDRAILS: Instrucción de seguridad para evitar mal uso del bot
-    const guardrail = "\n\nIMPORTANTE: Solo responde sobre YUPAY. Si el usuario desea contactar con soporte, inicia la entrevista paso a paso (Nombre -> Email -> Teléfono -> Asunto). NO pidas todo junto. Usa la herramienta 'notify_support' solo al final.";
+    // GUARDRAILS
+    const guardrail = "\n\nINSTRUCCIÓN DE SEGURIDAD: Solo responde sobre YUPAY. Si detectas intención de contacto humano, recaba los datos y usa 'notify_support'.";
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
@@ -74,7 +87,7 @@ Deno.serve(async (req) => {
     const tools = [{
       function_declarations: [{
         name: "notify_support",
-        description: "Envía una notificación a soporte con los datos del usuario para que lo contacten.",
+        description: "Envía una notificación al equipo de soporte (Telegram) con los datos del usuario.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -95,7 +108,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           contents,
           tools: toolsList,
-          generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+          generationConfig: { maxOutputTokens: 500, temperature: 0.6 }
         }),
       });
       return await resp.json();
@@ -132,12 +145,26 @@ Deno.serve(async (req) => {
         if (botToken && chatId) {
           const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
+          // Helper to escape HTML characters
+          const escapeHtml = (str: string) => {
+            return (str || '').replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+          };
+
+          const safeName = escapeHtml(name);
+          const safeEmail = escapeHtml(email);
+          const safePhone = escapeHtml(phone);
+          const safeSubject = escapeHtml(subject);
+
           // Usamos HTML para evitar errores de parseo con caracteres especiales de Markdown
           const text = `🚀 <b>Nuevo Lead desde YUPAY</b>\n\n` +
-            `👤 <b>Nombre:</b> ${name}\n` +
-            `📧 <b>Email:</b> ${email}\n` +
-            `📞 <b>Teléfono:</b> ${phone}\n` +
-            `📝 <b>Asunto:</b> ${subject}\n\n` +
+            `👤 <b>Nombre:</b> ${safeName}\n` +
+            `📧 <b>Email:</b> ${safeEmail}\n` +
+            `📞 <b>Teléfono:</b> ${safePhone}\n` +
+            `📝 <b>Asunto:</b> ${safeSubject}\n\n` +
             `<i>Enviado desde el Asistente AI</i>`;
 
           try {

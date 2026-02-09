@@ -51,6 +51,7 @@ interface SettingsViewProps {
     subscription?: Subscription | null;
     salesThisMonth?: number;
     productsCount?: number;
+    savePaymentConfig?: (provider: 'mercadopago', accessToken: string, publicKey?: string) => Promise<void>;
     defaultTab?: string;
 }
 
@@ -114,6 +115,7 @@ export function SettingsView({
     subscription,
     salesThisMonth = 0,
     productsCount = 0,
+    savePaymentConfig,
     defaultTab = 'general'
 }: SettingsViewProps) {
     const { user } = useAuth();
@@ -141,6 +143,9 @@ export function SettingsView({
     const [showNewPayment, setShowNewPayment] = useState(false);
     const [newPayment, setNewPayment] = useState({ type: 'transferencia' as const, name: '', description: '', instructions: '' });
     const [editingPayment, setEditingPayment] = useState<PaymentMethod | null>(null);
+    const [mpAccessToken, setMpAccessToken] = useState('');
+    const [mpPublicKey, setMpPublicKey] = useState('');
+    const [isSavingPayment, setIsSavingPayment] = useState(false);
 
     // Plan Upgrade State
     const [isUpgrading, setIsUpgrading] = useState(false);
@@ -631,6 +636,109 @@ export function SettingsView({
                         </div>
                     </CardContent>
                 </Card>
+            </TabsContent>
+
+            <TabsContent value="payments">
+                <div className="space-y-6">
+                    <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
+                            <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
+                                <CreditCard className="h-5 w-5 text-violet-500" />
+                                Pasarelas de Pago
+                            </CardTitle>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Configura tus procesadores de pago para cobros online</p>
+                        </CardHeader>
+                        <CardContent className="p-4 sm:p-6 space-y-6">
+                            <div className="p-4 border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                                        <Wallet className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div className="space-y-4 flex-1">
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 dark:text-white">Mercado Pago</h4>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                Cobra online con tarjetas y dinero en cuenta. Requiere cuenta de vendedor en Mercado Pago.
+                                            </p>
+                                        </div>
+
+                                        {/* Credentials Form */}
+                                        <div className="space-y-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Access Token (Producción)</Label>
+                                                <Input
+                                                    type="password"
+                                                    placeholder="APP_USR-..."
+                                                    value={mpAccessToken}
+                                                    onChange={(e) => setMpAccessToken(e.target.value)}
+                                                    className="h-9 text-xs font-mono bg-white dark:bg-gray-800"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Public Key (Opcional)</Label>
+                                                <Input
+                                                    type="text"
+                                                    placeholder="APP_USR-..."
+                                                    value={mpPublicKey}
+                                                    onChange={(e) => setMpPublicKey(e.target.value)}
+                                                    className="h-9 text-xs font-mono bg-white dark:bg-gray-800"
+                                                />
+                                            </div>
+
+                                            <Button
+                                                onClick={async () => {
+                                                    if (!mpAccessToken) {
+                                                        toast.error('El Access Token es obligatorio');
+                                                        return;
+                                                    }
+                                                    setIsSavingPayment(true);
+                                                    try {
+                                                        await savePaymentConfig?.('mercadopago', mpAccessToken, mpPublicKey);
+                                                        setMpAccessToken('');
+                                                        setMpPublicKey('');
+                                                    } finally {
+                                                        setIsSavingPayment(false);
+                                                    }
+                                                }}
+                                                disabled={isSavingPayment || !mpAccessToken}
+                                                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
+                                            >
+                                                {isSavingPayment ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                                                Guardar Credenciales
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 border-t dark:border-gray-800">
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Métodos Manuales</h4>
+                                {/* Existing manual methods UI (placeholder for now, reusing existing structure if needed or leaving for manual setup) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {paymentMethods.map(method => (
+                                        <div key={method.id} className="p-3 border dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group relative">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${method.type === 'efectivo' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                        <Banknote className="h-4 w-4" />
+                                                    </div>
+                                                    <span className="text-sm font-bold capitalize">{method.name}</span>
+                                                </div>
+                                                <Badge variant={method.isActive ? 'default' : 'secondary'} className="text-[10px]">
+                                                    {method.isActive ? 'Activo' : 'Inactivo'}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-xs text-gray-500 line-clamp-2 mb-2">{method.description || 'Sin descripción'}</p>
+                                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6"><Settings className="h-3 w-3" /></Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </TabsContent>
 
             <TabsContent value="general">

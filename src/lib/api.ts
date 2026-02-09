@@ -330,6 +330,51 @@ export const storeApi = {
             .update({ status })
             .eq('id', orderId);
         if (error) throw error;
+    },
+
+    async savePaymentConfig(config: { storeId: string; provider: string; accessToken: string; publicKey?: string; isActive?: boolean }) {
+        const dbConfig = {
+            store_id: config.storeId,
+            provider: config.provider,
+            access_token: config.accessToken,
+            public_key: config.publicKey,
+            is_active: config.isActive ?? true
+        };
+
+        // Upsert based on store_id and provider
+        const { error } = await supabase
+            .from('store_payment_configs')
+            .upsert(dbConfig, { onConflict: 'store_id, provider' });
+
+        if (error) {
+            console.error('Error saving payment config:', error);
+            throw error;
+        }
+    },
+
+    async getPaymentConfig(storeId: string, provider: string) {
+        const { data, error } = await supabase
+            .from('store_payment_configs')
+            .select('*')
+            .eq('store_id', storeId)
+            .eq('provider', provider)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // Ignore "not found" error
+            console.error('Error getting payment config:', error);
+            throw error;
+        }
+
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            storeId: data.store_id,
+            provider: data.provider,
+            accessToken: data.access_token, // Be careful exposing this! Ideally masked or only used for check.
+            publicKey: data.public_key,
+            isActive: data.is_active
+        };
     }
 };
 
@@ -447,5 +492,22 @@ export const clientApi = {
             .update({ status: 'cancelado' })
             .eq('id', orderId);
         if (error) throw error;
+    },
+
+    async createStorePreference(storeId: string, items: any[], buyerEmail: string) {
+        console.log('Creating preference for store:', storeId);
+        const { data, error } = await supabase.functions.invoke('create-store-preference', {
+            body: {
+                storeId,
+                items,
+                buyerEmail
+            }
+        });
+
+        if (error) {
+            console.error('Error creating preference:', error);
+            throw error;
+        }
+        return data;
     }
 };

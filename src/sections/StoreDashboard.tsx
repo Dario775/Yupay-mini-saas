@@ -42,7 +42,8 @@ export default function StoreDashboard() {
     store, updateStoreInfo,
     // Flash Offers
     flashOffers, activeFlashOffers, canCreateFlashOffer, flashOffersRemaining,
-    maxFlashOfferRadius, createFlashOffer, cancelFlashOffer
+    maxFlashOfferRadius, createFlashOffer, cancelFlashOffer,
+    savePaymentConfig
   } = useStoreData(storeId);
 
   const [activeTab, setActiveTab] = useState('products');
@@ -238,6 +239,7 @@ export default function StoreDashboard() {
             subscription={subscription}
             salesThisMonth={subscription?.salesThisMonth || 0}
             productsCount={products.length}
+            savePaymentConfig={savePaymentConfig}
             defaultTab={settingsTab}
             key={`settings-${settingsTab}`} // Force re-render/re-init if tab changes
           />
