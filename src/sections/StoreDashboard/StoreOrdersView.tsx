@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { ShoppingCart, Search, Download, Archive, Home, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Search, Download, Archive, Home, MessageCircle, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,14 +43,24 @@ export function StoreOrdersView({
     );
 
     return (
-        <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-            <CardHeader className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b dark:border-gray-800">
+        <Card className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl shadow-violet-500/5 overflow-hidden">
+            {/* Mesh Gradient Glow */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-violet-500/10 dark:bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 dark:bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
+
+            <CardHeader className="relative p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-md">
                 <div>
-                    <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-                        <ShoppingCart className="h-4 w-4 text-violet-500" />
-                        Ventas
+                    <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2 dark:text-white">
+                        <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                            <ShoppingCart className="h-5 w-5 text-violet-600" />
+                        </div>
+                        Historial de Ventas
                     </CardTitle>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{filteredOrders.length} pedidos hoy</p>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{filteredOrders.length} pedidos hoy</p>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+                        <span className="text-[10px] font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wider">Live Feed</span>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="relative flex-1 md:flex-none">
@@ -60,43 +71,71 @@ export function StoreOrdersView({
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 space-y-4">
-                {filteredOrders.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
-                        <Archive className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        <p className="text-sm">Sin pedidos registrados</p>
-                    </div>
-                ) : (
-                    filteredOrders.map((order) => (
-                        <div key={order.id} className="p-4 rounded-xl border dark:border-gray-800 hover:shadow-sm transition-all bg-gray-50/50 dark:bg-gray-800/20">
-                            <div className="flex justify-between items-start mb-3">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-mono text-gray-400">#{order.id}</span>
-                                        <OrderStatusBadge status={order.status} />
+                <AnimatePresence mode="popLayout">
+                    {filteredOrders.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center py-12 text-gray-400"
+                        >
+                            <Archive className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                            <p className="text-sm font-medium">Sin pedidos registrados</p>
+                        </motion.div>
+                    ) : (
+                        filteredOrders.map((order, index) => (
+                            <motion.div
+                                key={order.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="group relative p-5 rounded-2xl border border-gray-100 dark:border-gray-800/50 hover:border-violet-200 dark:hover:border-violet-900/30 hover:shadow-lg hover:shadow-violet-500/5 transition-all bg-white dark:bg-gray-800/20"
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[11px] font-black font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md uppercase tracking-tighter">
+                                                ID-{order.id.slice(0, 8)}
+                                            </span>
+                                            <OrderStatusBadge status={order.status} />
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-white">
+                                            <span>{order.createdAt.toLocaleDateString()}</span>
+                                            <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+                                            <span className="text-gray-500 dark:text-gray-400">{order.items.length} {order.items.length === 1 ? 'producto' : 'productos'}</span>
+                                        </div>
                                     </div>
-                                    <p className="text-xs font-bold text-gray-900 dark:text-white">{order.createdAt.toLocaleDateString()} • {order.items.length} productos</p>
+                                    <div className="text-right">
+                                        <span className="text-lg font-black text-gray-900 dark:text-white tracking-tight">${order.total.toFixed(2)}</span>
+                                        <p className="text-[9px] text-violet-600 dark:text-violet-400 font-bold uppercase tracking-widest mt-0.5">Pendiente de cobro</p>
+                                    </div>
                                 </div>
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">${order.total.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between pt-3 border-t dark:border-gray-800">
-                                <p className="text-[10px] text-gray-500 line-clamp-1 max-w-[150px]">{order.shippingAddress}</p>
-                                <div className="flex gap-2">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-7 text-[10px] px-2">Estado</Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'procesando')}>Procesando</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'enviado')}>Enviado</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'entregado')}>Entregado</DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem className="text-red-600" onClick={() => updateOrderStatus(order.id, 'cancelado')}>Cancelar</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={() => setSelectedOrder(order)}>Detalles</Button>
+                                <div className="flex items-center justify-between pt-4 border-t border-dashed dark:border-gray-800">
+                                    <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 italic">
+                                        <Home className="h-3 w-3" />
+                                        <span className="line-clamp-1 max-w-[200px]">{order.shippingAddress}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="secondary" size="sm" className="h-8 text-[10px] font-bold px-3 bg-gray-100 dark:bg-gray-800 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-gray-600 dark:text-gray-300 transition-colors">
+                                                    Actualizar Estado
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-40">
+                                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'procesando')} className="text-xs">Procesando</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'enviado')} className="text-xs">Enviado</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'entregado')} className="text-xs">Entregado</DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem className="text-red-600 text-xs font-bold" onClick={() => updateOrderStatus(order.id, 'cancelado')}>Cancelar Pedido</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold px-3" onClick={() => setSelectedOrder(order)}>Ver Detalle</Button>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))
-                )}
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
             </CardContent>
 
             {/* Order Detail Dialog */}

@@ -7,6 +7,18 @@
 
 Plataforma SaaS completa para la gestión de negocios PYMES. Administra tiendas, productos, órdenes y suscripciones desde un solo lugar.
 
+## ⚠️ Filosofía de Diseño: Mercado Unificado
+
+Es crucial entender que **YUPAY NO es un constructor de sitios web individuales** (como Shopify o Wix).
+
+**YUPAY es un Marketplace Hiper-local:**
+- Todas las tiendas y usuarios conviven en una única plataforma.
+- **Geolocalización:** Los usuarios ven productos de las tiendas cercanas a su ubicación.
+- **Perfil de Negocio:** Cada tienda tiene un perfil dentro del marketplace, no un sitio web aislado.
+- **Comunidad:** El objetivo es conectar vecinos con comercios locales en un ecosistema compartido.
+
+Cualquier cambio en el copy, diseño o funcionalidad debe reflejar esta naturaleza de "Comunidad/Marketplace" y no de "Tu propia página web aislada".
+
 ## 🚀 Características
 
 - **🔐 Multi-rol**: Soporte para Administradores, Clientes y Dueños de Tienda

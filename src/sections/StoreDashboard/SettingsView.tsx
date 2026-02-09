@@ -3,8 +3,9 @@ import { useState } from 'react';
 import {
     Settings, Truck, CreditCard, MapPin,
     Loader2, CheckCircle, Plus, MoreHorizontal,
-    Wallet, Banknote, Home, User, Crown, Zap, Sparkles, Check, ArrowRight
+    Wallet, Banknote, Home, User, Crown, Zap, Sparkles, Check, ArrowRight, ShieldCheck
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -314,147 +315,211 @@ export function SettingsView({
     };
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-white dark:bg-gray-800 p-1 rounded-lg border dark:border-gray-800">
-                <TabsTrigger value="profile" className="text-xs"><User className="h-3 w-3 mr-1.5" />Perfil</TabsTrigger>
-                <TabsTrigger value="subscription" className="text-xs"><Crown className="h-3 w-3 mr-1.5" />Mi Plan</TabsTrigger>
-                <TabsTrigger value="general" className="text-xs"><Settings className="h-3 w-3 mr-1.5" />General</TabsTrigger>
-                <TabsTrigger value="shipping" className="text-xs"><Truck className="h-3 w-3 mr-1.5" />Envíos</TabsTrigger>
-                <TabsTrigger value="payments" className="text-xs"><CreditCard className="h-3 w-3 mr-1.5" />Cobros</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/50 dark:bg-gray-800/50 p-1.5 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl shadow-violet-500/5 sticky top-0 z-20"
+            >
+                <TabsList className="bg-transparent border-0 flex flex-wrap h-auto gap-1">
+                    {[
+                        { value: 'profile', icon: User, label: 'Perfil' },
+                        { value: 'subscription', icon: Crown, label: 'Mi Plan' },
+                        { value: 'general', icon: Settings, label: 'General' },
+                        { value: 'shipping', icon: Truck, label: 'Envíos' },
+                        { value: 'payments', icon: CreditCard, label: 'Cobros' }
+                    ].map(tab => (
+                        <TabsTrigger
+                            key={tab.value}
+                            value={tab.value}
+                            className="flex-1 min-w-[100px] text-xs font-bold uppercase tracking-wider h-10 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all rounded-xl"
+                        >
+                            <tab.icon className="h-3.5 w-3.5 mr-2" />
+                            {tab.label}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </motion.div>
 
 
             <TabsContent value="profile">
-                <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                    <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
-                        <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-                            <User className="h-4 w-4 text-violet-500" />
-                            Perfil del Dueño
-                        </CardTitle>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Gestiona tus datos personales</p>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Nombre Completo</Label>
-                                <Input
-                                    value={profileData.name}
-                                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                                    className="dark:bg-gray-800"
-                                />
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4 }}
+                >
+                    <Card className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl shadow-violet-500/5 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 blur-[100px] rounded-full pointer-events-none" />
+
+                        <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800 relative bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+                            <CardTitle className="text-xl font-black flex items-center gap-3 dark:text-white">
+                                <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                                    <User className="h-5 w-5 text-violet-600" />
+                                </div>
+                                Perfil de Administrador
+                            </CardTitle>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Datos principales de contacto</p>
+                                <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest">Verified Owner</span>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Email</Label>
-                                <Input
-                                    value={profileData.email}
-                                    disabled
-                                    className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed text-gray-500"
-                                />
-                                <p className="text-[10px] text-gray-500">El email no se puede cambiar por seguridad.</p>
+                        </CardHeader>
+                        <CardContent className="p-4 sm:p-6 space-y-6 relative">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-wider text-gray-400">Nombre Completo</Label>
+                                    <Input
+                                        value={profileData.name}
+                                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                        className="h-11 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-wider text-gray-400">Email de acceso</Label>
+                                    <div className="relative">
+                                        <Input
+                                            value={profileData.email}
+                                            disabled
+                                            className="h-11 bg-gray-50 dark:bg-gray-800/80 cursor-not-allowed text-gray-500 border-gray-200 dark:border-gray-700"
+                                        />
+                                        <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                                    </div>
+                                    <p className="text-[9px] text-gray-400 font-medium">Protegido • No se puede modificar manualmente</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-wider text-gray-400">Teléfono Whatsapp</Label>
+                                    <Input
+                                        value={profileData.phone}
+                                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                        className="h-11 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500"
+                                        placeholder="+54 11 ..."
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Teléfono</Label>
-                                <Input
-                                    value={profileData.phone}
-                                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                    className="dark:bg-gray-800"
-                                    placeholder="+54 11 ..."
-                                />
+                            <div className="flex justify-end pt-4">
+                                <Button onClick={handleUpdateProfile} className="h-11 px-8 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 active:scale-95 transition-all">
+                                    Actualizar Perfil
+                                </Button>
                             </div>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <Button onClick={handleUpdateProfile} className="bg-violet-600 hover:bg-violet-700 text-white">Guardar Cambios</Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </TabsContent>
 
             {/* Subscription Tab */}
             <TabsContent value="subscription" className="space-y-6">
-                {/* Current Plan Card */}
-                {(() => {
-                    const activePlanData = PLANS.find(p => p.id === currentPlan) || PLANS[0];
-                    const ActiveIcon = activePlanData.icon;
-                    const colorClasses = {
-                        gray: 'from-slate-600 to-slate-800 text-slate-50',
-                        blue: 'from-blue-600 to-indigo-700 text-blue-50',
-                        violet: 'from-violet-600 to-purple-700 text-violet-50',
-                        amber: 'from-amber-500 to-orange-600 text-amber-50'
-                    }[activePlanData.color || 'gray'];
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    {(() => {
+                        const activePlanData = PLANS.find(p => p.id === currentPlan) || PLANS[0];
+                        const ActiveIcon = activePlanData.icon;
+                        const colorClasses = {
+                            gray: 'from-slate-600 to-slate-900 text-slate-50',
+                            blue: 'from-blue-600 to-indigo-800 text-blue-50',
+                            violet: 'from-violet-600 to-purple-900 text-violet-50',
+                            amber: 'from-amber-500 to-orange-700 text-amber-50'
+                        }[activePlanData.color || 'gray'];
 
-                    const accentClasses = {
-                        gray: 'bg-white/10 text-slate-200',
-                        blue: 'bg-white/10 text-blue-100',
-                        violet: 'bg-white/10 text-violet-100',
-                        amber: 'bg-white/10 text-amber-100'
-                    }[activePlanData.color || 'gray'];
+                        const accentClasses = {
+                            gray: 'bg-black/10 text-slate-100',
+                            blue: 'bg-white/10 text-blue-50',
+                            violet: 'bg-white/10 text-violet-50',
+                            amber: 'bg-white/10 text-amber-50'
+                        }[activePlanData.color || 'gray'];
 
-                    return (
-                        <Card className={`bg-gradient-to-br ${colorClasses} border-0 shadow-xl overflow-hidden relative`}>
-                            {/* Decorative Background Icon */}
-                            <div className="absolute -right-8 -bottom-8 opacity-10 rotate-12">
-                                <ActiveIcon className="h-40 w-40" />
-                            </div>
+                        return (
+                            <Card className={`relative bg-gradient-to-br ${colorClasses} border-0 shadow-2xl shadow-violet-500/20 overflow-hidden`}>
+                                {/* High-end Decorative Elements */}
+                                <div className="absolute -right-12 -top-12 w-64 h-64 bg-white/5 blur-[80px] rounded-full pointer-events-none" />
+                                <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-black/10 blur-[80px] rounded-full pointer-events-none" />
 
-                            <CardContent className="p-6 relative z-10">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-md">
-                                                <ActiveIcon className="h-4 w-4" />
+                                <CardContent className="p-8 relative z-10">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-xl border border-white/20 shadow-xl">
+                                                    <ActiveIcon className="h-6 w-6 text-white" />
+                                                </div>
+                                                <div>
+                                                    <p className="opacity-80 text-[10px] font-black uppercase tracking-[0.3em] mb-0.5">Suscripción Activa</p>
+                                                    <h3 className="text-4xl font-black capitalize tracking-tighter sm:text-5xl">{activePlanData.name}</h3>
+                                                </div>
                                             </div>
-                                            <p className="opacity-80 text-[10px] font-black uppercase tracking-[0.2em]">Tu plan actual</p>
-                                        </div>
-                                        <h3 className="text-3xl font-black mt-1 capitalize tracking-tight">{activePlanData.name}</h3>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 text-[10px] font-bold py-0 h-5">
-                                                {subscription?.status === 'trial' ? 'En Prueba' : subscription?.status === 'activa' ? 'Cuenta Activa' : 'Pendiente'}
-                                            </Badge>
-                                            {subscription?.status === 'trial' && (
-                                                <span className="text-xs font-medium opacity-80">
-                                                    Quedan {Math.max(0, Math.ceil(((subscription?.trialEndDate?.getTime() || 0) - Date.now()) / (1000 * 60 * 60 * 24)))} días
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 shadow-inner">
-                                        <ActiveIcon className="h-10 w-10 text-white drop-shadow-lg" />
-                                    </div>
-                                </div>
 
-                                {/* Usage Stats Grid */}
-                                <div className="grid grid-cols-2 gap-4 mt-8">
-                                    <div className={`${accentClasses} backdrop-blur-md rounded-2xl p-4 border border-white/5`}>
-                                        <p className="opacity-70 text-[10px] font-bold uppercase tracking-wider mb-1">Ventas este mes</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-2xl font-black">{salesThisMonth}</span>
-                                            <span className="text-xs opacity-60">/ {activePlanData.maxSales === -1 ? '∞' : activePlanData.maxSales}</span>
+                                            <div className="flex items-center gap-3">
+                                                <Badge className="bg-white text-violet-900 border-0 text-[10px] font-black py-1 px-3 h-auto uppercase tracking-tighter">
+                                                    {subscription?.status === 'trial' ? 'Periodo de Gracia' : 'Plan Pro'}
+                                                </Badge>
+                                                {subscription?.status === 'trial' && (
+                                                    <div className="flex items-center gap-1.5 text-xs font-bold bg-black/20 py-1 px-3 rounded-full backdrop-blur-sm">
+                                                        <Sparkles className="h-3 w-3" />
+                                                        <span>{Math.max(0, Math.ceil(((subscription?.trialEndDate?.getTime() || 0) - Date.now()) / (1000 * 60 * 60 * 24)))} días restantes</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="w-full h-1.5 bg-black/10 rounded-full mt-2 overflow-hidden">
-                                            <div
-                                                className="h-full bg-white rounded-full transition-all duration-1000"
-                                                style={{ width: `${activePlanData.maxSales === -1 ? 0 : Math.min(100, (salesThisMonth / activePlanData.maxSales) * 100)}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className={`${accentClasses} backdrop-blur-md rounded-2xl p-4 border border-white/5`}>
-                                        <p className="opacity-70 text-[10px] font-bold uppercase tracking-wider mb-1">Productos</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-2xl font-black">{productsCount}</span>
-                                            <span className="text-xs opacity-60">/ {activePlanData.maxProducts === -1 ? '∞' : activePlanData.maxProducts}</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-black/10 rounded-full mt-2 overflow-hidden">
-                                            <div
-                                                className="h-full bg-white rounded-full transition-all duration-1000"
-                                                style={{ width: `${activePlanData.maxProducts === -1 ? 0 : Math.min(100, (productsCount / activePlanData.maxProducts) * 100)}%` }}
-                                            />
+
+                                        <div className="flex -space-x-4">
+                                            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl rotate-[-12deg]">
+                                                <Zap className="h-8 w-8 opacity-40" />
+                                            </div>
+                                            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl relative z-10 scale-110">
+                                                <ActiveIcon className="h-8 w-8" />
+                                            </div>
+                                            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-2xl rotate-[12deg]">
+                                                <ShieldCheck className="h-8 w-8 opacity-40" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })()}
+
+                                    {/* Advanced Metrics Feed */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12">
+                                        <div className={`${accentClasses} backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-inner group hover:bg-white/20 transition-all duration-500`}>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <p className="opacity-70 text-[10px] font-black uppercase tracking-widest">Cuota de Ventas</p>
+                                                <div className="p-1 bg-white/10 rounded-lg"><ArrowRight className="h-3 w-3" /></div>
+                                            </div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black tracking-tighter">{salesThisMonth}</span>
+                                                <span className="text-base opacity-50 font-bold">/ {activePlanData.maxSales === -1 ? '∞' : activePlanData.maxSales}</span>
+                                            </div>
+                                            <div className="mt-4 relative h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${activePlanData.maxSales === -1 ? 0 : Math.min(100, (salesThisMonth / activePlanData.maxSales) * 100)}%` }}
+                                                    transition={{ duration: 1.5, ease: "circOut" }}
+                                                    className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className={`${accentClasses} backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-inner group hover:bg-white/20 transition-all duration-500`}>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <p className="opacity-70 text-[10px] font-black uppercase tracking-widest">Capacidad de Catálogo</p>
+                                                <div className="p-1 bg-white/10 rounded-lg"><Plus className="h-3 w-3" /></div>
+                                            </div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black tracking-tighter">{productsCount}</span>
+                                                <span className="text-base opacity-50 font-bold">/ {activePlanData.maxProducts === -1 ? '∞' : activePlanData.maxProducts}</span>
+                                            </div>
+                                            <div className="mt-4 relative h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${activePlanData.maxProducts === -1 ? 0 : Math.min(100, (productsCount / activePlanData.maxProducts) * 100)}%` }}
+                                                    transition={{ duration: 1.5, ease: "circOut", delay: 0.2 }}
+                                                    className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })()}
+                </motion.div>
 
                 {/* Available Plans */}
                 <div>
@@ -569,120 +634,156 @@ export function SettingsView({
             </TabsContent>
 
             <TabsContent value="general">
-                <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                    <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
-                        <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-                            <Settings className="h-4 w-4 text-violet-500" />
-                            Configuración General
-                        </CardTitle>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Gestiona los datos de tu tienda</p>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6 space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nombre de la tienda</Label>
-                                <Input
-                                    value={store?.name || ''}
-                                    onChange={(e) => updateStoreInfo({ name: e.target.value })}
-                                    className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Categoría</Label>
-                                <Input
-                                    value={store?.category || ''}
-                                    onChange={(e) => updateStoreInfo({ category: e.target.value })}
-                                    className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                />
-                            </div>
-                            <div className="space-y-1.5 sm:col-span-2">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Descripción</Label>
-                                <Textarea
-                                    value={store?.description || ''}
-                                    onChange={(e) => updateStoreInfo({ description: e.target.value })}
-                                    rows={3}
-                                    className="text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                />
-                            </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <Card className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl shadow-violet-500/5 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-64 h-64 bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
 
-                            {/* Location Input with Autocomplete */}
-                            <div className="space-y-1.5 sm:col-span-2 relative">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Ubicación / Dirección</Label>
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <Input
-                                            value={locationQuery}
-                                            onChange={(e) => handleSearchLocation(e.target.value)}
-                                            placeholder="Buscar dirección..."
-                                            className="pl-9 h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                        />
-                                        {showSuggestions && locationSuggestions.length > 0 && (
-                                            <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                {locationSuggestions.map((suggestion, index) => (
-                                                    <button
-                                                        key={index}
-                                                        onClick={() => handleSelectLocation(suggestion)}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 transition-colors border-b dark:border-gray-700 last:border-0"
-                                                    >
-                                                        <p className="font-medium text-xs sm:text-sm">{suggestion.address}</p>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={handleCurrentLocation}
-                                        disabled={isLocating}
-                                        className="h-9 w-9 shrink-0 bg-white dark:bg-gray-800"
-                                        title="Usar mi ubicación actual"
-                                    >
-                                        {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4 text-violet-500" />}
-                                    </Button>
+                        <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800 relative bg-white/50 dark:bg-gray-900/50 backdrop-blur-md">
+                            <CardTitle className="text-xl font-black flex items-center gap-3 dark:text-white">
+                                <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                                    <Settings className="h-5 w-5 text-violet-600" />
                                 </div>
-                                {store?.location && (
-                                    <div className="space-y-2 mt-2">
-                                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                            <CheckCircle className="h-3 w-3" /> Ubicación verificada: {store.location.locality}, {store.location.province}
-                                        </p>
-                                        <div className="h-48 w-full rounded-lg overflow-hidden border dark:border-gray-700">
-                                            <LocationMap
-                                                lat={store.location.lat}
-                                                lng={store.location.lng}
-                                                onLocationChange={handleMapLocationChange}
-                                            />
-                                        </div>
-                                        <p className="text-[10px] text-gray-400 text-center">
-                                            Arrastra el pin para ajustar la ubicación exacta
-                                        </p>
+                                Identidad de Marca
+                            </CardTitle>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Personaliza la presentación pública de tu negocio</p>
+                        </CardHeader>
+                        <CardContent className="p-4 sm:p-6 space-y-8 relative">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Nombre del Comercio</Label>
+                                        <Input
+                                            value={store?.name || ''}
+                                            onChange={(e) => updateStoreInfo({ name: e.target.value })}
+                                            className="h-11 text-base font-bold dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 focus:border-violet-500"
+                                        />
                                     </div>
-                                )}
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Categoría del Rubro</Label>
+                                        <Input
+                                            value={store?.category || ''}
+                                            onChange={(e) => updateStoreInfo({ category: e.target.value })}
+                                            className="h-11 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Biografía / Descripción</Label>
+                                        <Textarea
+                                            value={store?.description || ''}
+                                            onChange={(e) => updateStoreInfo({ description: e.target.value })}
+                                            rows={4}
+                                            className="dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 leading-relaxed"
+                                            placeholder="Cuenta brevemente qué vendes y qué te hace único..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    {/* Location Input with Autocomplete */}
+                                    <div className="space-y-2 relative">
+                                        <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Punto Geográfico</Label>
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-500" />
+                                                <Input
+                                                    value={locationQuery}
+                                                    onChange={(e) => handleSearchLocation(e.target.value)}
+                                                    placeholder="Buscar dirección..."
+                                                    className="pl-10 h-11 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
+                                                />
+                                                <AnimatePresence>
+                                                    {showSuggestions && locationSuggestions.length > 0 && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0 }}
+                                                            className="absolute z-50 left-0 right-0 mt-2 bg-white/90 dark:bg-gray-800/95 backdrop-blur-xl border dark:border-gray-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto"
+                                                        >
+                                                            {locationSuggestions.map((suggestion, index) => (
+                                                                <button
+                                                                    key={index}
+                                                                    onClick={() => handleSelectLocation(suggestion)}
+                                                                    className="w-full text-left px-5 py-4 text-sm hover:bg-violet-50 dark:hover:bg-violet-900/30 dark:text-gray-200 transition-colors border-b dark:border-gray-700 last:border-0"
+                                                                >
+                                                                    <p className="font-bold text-xs">{suggestion.address}</p>
+                                                                    <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">{suggestion.locality}, {suggestion.province}</p>
+                                                                </button>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={handleCurrentLocation}
+                                                disabled={isLocating}
+                                                className="h-11 w-11 shrink-0 bg-white/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 hover:bg-violet-50"
+                                            >
+                                                {isLocating ? <Loader2 className="h-4 w-4 animate-spin text-violet-500" /> : <Sparkles className="h-4 w-4 text-violet-500" />}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {store?.location && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="space-y-3"
+                                        >
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider">
+                                                    Check-in validado: {store.location.locality}
+                                                </p>
+                                            </div>
+                                            <div className="h-56 w-full rounded-2xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl relative group">
+                                                <LocationMap
+                                                    lat={store.location.lat}
+                                                    lng={store.location.lng}
+                                                    onLocationChange={handleMapLocationChange}
+                                                />
+                                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-900/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                    <p className="text-[10px] text-white font-bold text-center">ARRASTRA PARA AJUSTE FINO</p>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Teléfono</Label>
-                                <Input
-                                    value={store?.phone || ''}
-                                    onChange={(e) => updateStoreInfo({ phone: e.target.value })}
-                                    className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t dark:border-gray-800">
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Canal de Contacto</Label>
+                                    <Input
+                                        value={store?.phone || ''}
+                                        onChange={(e) => updateStoreInfo({ phone: e.target.value })}
+                                        className="h-11 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 font-mono"
+                                        placeholder="+54 9 ..."
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Atención al Cliente (Email)</Label>
+                                    <Input
+                                        value={store?.email || ''}
+                                        onChange={(e) => updateStoreInfo({ email: e.target.value })}
+                                        className="h-11 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
+                                        placeholder="soporte@tu-negocio.com"
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Email</Label>
-                                <Input
-                                    value={store?.email || ''}
-                                    onChange={(e) => updateStoreInfo({ email: e.target.value })}
-                                    className="h-9 text-sm bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
-                                />
+
+                            <div className="flex justify-end pt-4">
+                                <Button onClick={() => toast.success('Configuración de marca guardada')} className="h-12 px-10 bg-violet-600 hover:bg-violet-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-violet-500/20 transition-all active:scale-95">
+                                    Consolidar Datos
+                                </Button>
                             </div>
-                        </div>
-                        <div className="flex justify-end pt-2">
-                            <Button onClick={() => toast.success('Configuración guardada')} className="bg-violet-600 hover:bg-violet-700 text-white text-sm h-9 px-6">Guardar cambios</Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </TabsContent>
 
             <TabsContent value="shipping">

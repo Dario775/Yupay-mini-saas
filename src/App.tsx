@@ -9,12 +9,20 @@ import AdminDashboard from '@/sections/AdminDashboard';
 import ClientDashboard from '@/sections/ClientDashboard';
 import StoreDashboard from '@/sections/StoreDashboard';
 import PublicStore from '@/sections/PublicStore';
+import About from '@/sections/About';
+import Contact from '@/sections/Contact';
+import Pricing from '@/sections/Pricing';
+import Integrations from '@/sections/Integrations';
+import Privacy from '@/sections/Privacy';
+import Features from '@/sections/Features';
+import ComingSoon from '@/sections/ComingSoon';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LogOut, Clock, AlertTriangle, Crown, ShieldAlert, ShoppingCart, Store, Package, Heart, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SupportChat } from '@/components/SupportChat';
 
 // Lista de emails autorizados para acceso admin
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'dary775@gmail.com').split(',').map((e: string) => e.trim().toLowerCase());
@@ -58,15 +66,11 @@ function HomeWrapper() {
     <Home
       onLogin={() => user ? navigate('/dashboard') : navigate('/login')}
       onRegister={() => navigate('/register')}
-      onTerms={() => navigate('/terms')}
     />
   );
 }
 
-function TermsWrapper() {
-  const navigate = useNavigate();
-  return <Terms onBack={() => navigate(-1)} />;
-}
+
 
 function AdminRoute() {
   const { user, loginWithGoogle, isLoading, logout } = useAuth();
@@ -259,7 +263,11 @@ function DashboardLayout() {
 }
 
 function AppRoutes() {
+  const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+
+  const handleLogin = () => navigate('/login');
+  const handleRegister = () => navigate('/register');
 
   if (isLoading) return <div className="h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div>;
 
@@ -268,7 +276,19 @@ function AppRoutes() {
       <Route path="/" element={<HomeWrapper />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginWrapper />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterWrapper />} />
-      <Route path="/terms" element={<TermsWrapper />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterWrapper />} />
+      <Route path="/terms" element={<Terms onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/privacy" element={<Privacy onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/about" element={<About onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/contact" element={<Contact onLogin={handleLogin} onRegister={handleRegister} />} />
+
+      {/* Coming Soon Pages */}
+      <Route path="/features" element={<Features onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/pricing" element={<Pricing onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/integrations" element={<Integrations onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/cookies" element={<ComingSoon title="Política de Cookies" description="Información sobre cómo utilizamos las cookies." onLogin={handleLogin} onRegister={handleRegister} />} />
+      <Route path="/ia-intelligence" element={<ComingSoon title="Inteligencia IA" description="Descubre cómo nuestra IA potencia tu negocio." onLogin={handleLogin} onRegister={handleRegister} />} />
+
       <Route path="/store/:slug" element={<PublicStore />} />
 
       <Route path="/admin" element={<AdminRoute />} />
@@ -287,6 +307,7 @@ export default function App() {
       <AuthProvider>
         <AppRoutes />
         <Toaster position="top-right" richColors closeButton />
+        <SupportChat />
       </AuthProvider>
     </ErrorBoundary>
   );

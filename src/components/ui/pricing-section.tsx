@@ -19,7 +19,7 @@ const PLAN_FEATURES_MAP: Record<string, {
 }> = {
     free: {
         name: "Gratis",
-        description: "Ideal si estás probando. ¡Es GRATIS para siempre y muy FÁCIL!",
+        description: "Ideal si estás probando. ¡Es 100% GRATIS para siempre y ridículamente FÁCIL!",
         buttonText: "¡SÍ, LO QUIERO GRATIS YA!",
         buttonVariant: "outline",
         features: [
@@ -212,35 +212,34 @@ export default function PricingSection() {
     });
 
     return (
-        <div className="px-4 py-20 min-h-screen mx-auto relative bg-neutral-100 dark:bg-gray-900 overflow-hidden" ref={pricingRef}>
+        <div className="px-4 py-32 min-h-screen mx-auto relative bg-slate-50 dark:bg-[#020617] overflow-hidden transition-colors duration-500" ref={pricingRef}>
             <div
                 className="absolute top-0 left-[10%] right-[10%] w-[80%] h-full z-0 pointer-events-none"
                 style={{
                     backgroundImage: `
-        radial-gradient(circle at center, #206ce8 0%, transparent 70%)
+        radial-gradient(circle at center, #4f46e5 0%, transparent 70%)
       `,
-                    opacity: 0.15,
-                    mixBlendMode: "multiply",
+                    opacity: 0.05,
                 }}
             />
 
-            <div className="text-center mb-6 max-w-3xl mx-auto relative z-10">
+            <div className="text-center mb-16 max-w-3xl mx-auto relative z-10">
                 <TimelineContent
                     as="h2"
                     animationNum={0}
                     timelineRef={pricingRef}
                     customVariants={revealVariants}
-                    className="md:text-6xl sm:text-4xl text-3xl font-bold text-gray-900 dark:text-white mb-4"
+                    className="text-4xl lg:text-6xl font-black text-slate-900 dark:text-white mb-6 tracking-tight"
                 >
-                    Planes GRATIS, FÁCILES y hechos para ti{" "}
+                    Ingeniería de Costos para la <br />{" "}
                     <TimelineContent
                         as="span"
                         animationNum={1}
                         timelineRef={pricingRef}
                         customVariants={revealVariants}
-                        className="border border-dashed border-blue-500 px-3 py-1 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 capitalize inline-block"
+                        className="px-6 py-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white capitalize inline-block italic shadow-2xl shadow-violet-500/20"
                     >
-                        negocio
+                        Expansión
                     </TimelineContent>
                 </TimelineContent>
 
@@ -249,10 +248,10 @@ export default function PricingSection() {
                     animationNum={2}
                     timelineRef={pricingRef}
                     customVariants={revealVariants}
-                    className="sm:text-lg text-base text-gray-600 dark:text-gray-400 sm:w-[70%] w-[80%] mx-auto"
+                    className="text-lg text-slate-500 dark:text-slate-400 font-medium max-w-2xl mx-auto"
                 >
-                    ¡Estamos aquí para ayudarte a crecer!
-                    Elige el plan que te haga más feliz.
+                    Modelos de suscripción diseñados para escalar sin fricciones.
+                    Desde emprendedores solitarios hasta corporaciones dinámicas.
                 </TimelineContent>
             </div>
 
@@ -266,7 +265,7 @@ export default function PricingSection() {
                 <PricingSwitch onSwitch={togglePricingPeriod} />
             </TimelineContent>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 max-w-7xl gap-6 py-12 mx-auto relative z-10">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 max-w-7xl gap-8 py-16 mx-auto relative z-10">
                 {plans.map((plan, index) => (
                     <TimelineContent
                         key={plan.name}
@@ -274,74 +273,79 @@ export default function PricingSection() {
                         animationNum={4 + index}
                         timelineRef={pricingRef}
                         customVariants={revealVariants}
+                        className="h-full"
                     >
                         <Card
-                            className={`relative border-neutral-200 dark:border-gray-700 h-full flex flex-col ${plan.popular
-                                ? "ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-xl scale-105 z-10"
-                                : "bg-white dark:bg-gray-800"
+                            className={`relative h-full flex flex-col group transition-all duration-500 rounded-[2.5rem] overflow-hidden ${plan.popular
+                                ? "ring-2 ring-violet-500 bg-white dark:bg-white/[0.05] shadow-[0_30px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.5)] scale-105 z-10 backdrop-blur-3xl border-transparent"
+                                : "bg-white dark:bg-white/[0.02] border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.04] backdrop-blur-xl"
                                 }`}
                         >
-                            <CardHeader className="text-left">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {plan.popular && (
+                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-violet-500 to-transparent" />
+                            )}
+
+                            <CardHeader className="text-left p-8">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                                         {plan.name}
                                     </h3>
                                     {plan.popular && (
-                                        <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                            Popular
+                                        <span className="bg-violet-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
+                                            Elite Choice
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-6">{plan.description}</p>
-                                <div className="flex items-baseline mb-4">
-                                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">{plan.description}</p>
+                                <div className="flex items-baseline mb-4 text-slate-900 dark:text-white">
+                                    <span className="text-4xl font-black tracking-tighter">
                                         $
                                         <NumberFlow
                                             value={isYearly ? plan.yearlyPrice : plan.price}
-                                            className="text-4xl font-bold"
+                                            className="text-4xl font-black tracking-tighter"
                                             locales="es-AR"
                                             format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
                                         />
                                     </span>
-                                    <span className="text-gray-600 dark:text-gray-400 ml-1 font-medium text-sm">
-                                        /{isYearly ? "año" : "mes"}
+                                    <span className="text-slate-500 ml-1 font-black text-[10px] uppercase tracking-widest">
+                                        /{isYearly ? "Año" : "Mes"}
                                     </span>
                                 </div>
                             </CardHeader>
 
-                            <CardContent className="pt-0 flex-1 flex flex-col">
+                            <CardContent className="px-8 pb-8 flex-1 flex flex-col">
                                 <button
-                                    className={`w-full mb-8 p-3 text-base font-bold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${plan.popular
-                                        ? "bg-gradient-to-t from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 border border-blue-400 text-white"
-                                        : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg border border-gray-700 dark:border-gray-200"
+                                    className={`w-full mb-10 py-5 text-xs font-black uppercase tracking-[0.2em] rounded-2xl transition-all duration-300 active:scale-95 ${plan.popular
+                                        ? "bg-violet-600 dark:bg-white text-white dark:text-indigo-950 shadow-2xl shadow-violet-500/20 dark:shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:bg-violet-700 dark:hover:bg-violet-50 font-black"
+                                        : "bg-slate-900 dark:bg-white/5 text-white dark:text-white border border-transparent dark:border-white/10 hover:bg-slate-800 dark:hover:bg-white/10"
                                         }`}
                                 >
                                     {plan.buttonText}
                                 </button>
-                                <ul className="space-y-3 mb-8">
+                                <ul className="space-y-4 mb-10">
                                     {plan.features.map((feature, featureIndex) => (
-                                        <li key={featureIndex} className="flex items-center gap-3">
-                                            <span className="text-blue-500 dark:text-blue-400">
+                                        <li key={featureIndex} className="flex items-center gap-4">
+                                            <div className="w-5 h-5 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-600 dark:text-violet-400">
                                                 {feature.icon}
-                                            </span>
-                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
                                                 {feature.text}
                                             </span>
                                         </li>
                                     ))}
                                 </ul>
 
-                                <div className="space-y-4 pt-6 border-t border-neutral-200 dark:border-gray-700 mt-auto">
-                                    <h4 className="font-bold text-xs text-gray-900 dark:text-white">
+                                <div className="space-y-5 pt-8 border-t border-slate-100 dark:border-white/5 mt-auto">
+                                    <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                                         {plan.includes[0]}
                                     </h4>
-                                    <ul className="space-y-3">
+                                    <ul className="space-y-4">
                                         {plan.includes.slice(1).map((feature, featureIndex) => (
-                                            <li key={featureIndex} className="flex items-center gap-3">
-                                                <div className="h-5 w-5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <CheckCheck className="h-3 w-3 text-blue-500" />
+                                            <li key={featureIndex} className="flex items-center gap-4 group/item">
+                                                <div className="h-6 w-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/item:border-violet-500/50 transition-colors">
+                                                    <CheckCheck className="h-3 w-3 text-violet-600 dark:text-violet-400" />
                                                 </div>
-                                                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">{feature}</span>
+                                                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-tight">{feature}</span>
                                             </li>
                                         ))}
                                     </ul>

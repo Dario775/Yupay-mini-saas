@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { Package, Search, Plus, Download, MoreHorizontal, AlertTriangle, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, Plus, Download, MoreHorizontal, AlertTriangle, Upload, X, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -277,14 +278,24 @@ export function InventoryView({
     };
 
     return (
-        <Card className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-            <CardHeader className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b dark:border-gray-800">
+        <Card className="relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl shadow-violet-500/5 overflow-hidden">
+            {/* Mesh Gradient Glow */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-violet-500/10 dark:bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 dark:bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
+
+            <CardHeader className="relative p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-md">
                 <div>
-                    <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-                        <Package className="h-4 w-4 text-violet-500" />
-                        Catálogo
+                    <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2 dark:text-white">
+                        <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                            <Package className="h-5 w-5 text-violet-600" />
+                        </div>
+                        Gestión de Catálogo
                     </CardTitle>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{filteredProducts.length} productos</p>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{filteredProducts.length} productos registrados</p>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+                        <span className="text-[10px] font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wider">Premium View</span>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="relative flex-1 md:flex-none">
@@ -302,61 +313,81 @@ export function InventoryView({
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b dark:border-gray-800 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                <th className="px-6 py-3">Producto</th>
-                                <th className="px-6 py-3">Categoría</th>
-                                <th className="px-6 py-3">Precio</th>
-                                <th className="px-6 py-3">Stock</th>
-                                <th className="px-6 py-3">Estado</th>
-                                <th className="px-6 py-3 text-right">Acciones</th>
+                            <tr className="border-b dark:border-gray-800 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
+                                <th className="px-6 py-4 font-black">Producto</th>
+                                <th className="px-6 py-4 font-black">Categoría</th>
+                                <th className="px-6 py-4 font-black">Inversión / Precio</th>
+                                <th className="px-6 py-4 font-black">disponibilidad</th>
+                                <th className="px-6 py-4 font-black">Estado</th>
+                                <th className="px-6 py-4 text-right font-black">Gestión</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
-                            {filteredProducts.map((product) => (
-                                <tr key={product.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-sm">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-gray-400 overflow-hidden border dark:border-gray-700">
-                                                {product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" /> : product.name.charAt(0)}
+                            <AnimatePresence mode="popLayout">
+                                {filteredProducts.map((product, index) => (
+                                    <motion.tr
+                                        key={product.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ duration: 0.3, delay: index * 0.03 }}
+                                        className="group hover:bg-violet-50/30 dark:hover:bg-violet-900/10 transition-all text-sm"
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative group/img">
+                                                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-gray-400 overflow-hidden border dark:border-gray-700 shadow-sm transition-transform duration-500 group-hover:scale-110">
+                                                        {product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" /> : product.name.charAt(0)}
+                                                    </div>
+                                                    <div className="absolute inset-0 rounded-xl bg-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 dark:text-white leading-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{product.name}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <p className="text-[9px] font-mono text-gray-400 uppercase tracking-tighter">{product.sku || 'REF-NOSKU'}</p>
+                                                        {product.isOnSale && (
+                                                            <Badge className="h-3.5 text-[8px] bg-amber-100 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 uppercase font-black px-1.5">Hot</Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900 dark:text-white leading-tight">{product.name}</p>
-                                                <p className="text-[10px] text-gray-500 line-clamp-1">{product.sku || 'Sin SKU'}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Badge variant="secondary" className="bg-gray-100/50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 font-medium text-[10px] border-0">
+                                                {PRODUCT_CATEGORIES.find(c => c.id === product.category)?.name || product.category}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-gray-900 dark:text-white">${product.price.toFixed(2)}</span>
+                                                {product.discount && <span className="text-[10px] text-green-600">-{product.discount}% OFF</span>}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
-                                        {PRODUCT_CATEGORIES.find(c => c.id === product.category)?.name || product.category}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-gray-900 dark:text-white">${product.price.toFixed(2)}</span>
-                                            {product.discount && <span className="text-[10px] text-green-600">-{product.discount}% OFF</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`flex items-center gap-1.5 ${product.stock <= (product.minStock || 5) ? 'text-red-600 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
-                                            {product.stock}
-                                            {product.stock <= (product.minStock || 5) && <AlertTriangle className="h-3 w-3" />}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <Switch checked={product.isActive} onCheckedChange={() => handleToggleActive(product)} className="scale-75 origin-left" />
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setSelectedProduct(product)}>Ver</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setEditingProduct(product)}>Editar</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setStockProduct(product); setShowStockModal(true); }}>Stock</DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-red-600" onClick={() => deleteProduct(product.id)}>Eliminar</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-bold ${product.stock <= (product.minStock || 5) ? 'bg-red-50 text-red-600 dark:bg-red-900/20' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20'}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${product.stock <= (product.minStock || 5) ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                                                {product.stock} disp.
+                                                {product.stock <= (product.minStock || 5) && <AlertTriangle className="h-3 w-3" />}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Switch checked={product.isActive} onCheckedChange={() => handleToggleActive(product)} className="data-[state=checked]:bg-violet-600" />
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => setSelectedProduct(product)}>Ver</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setEditingProduct(product)}>Editar</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => { setStockProduct(product); setShowStockModal(true); }}>Stock</DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-red-600" onClick={() => deleteProduct(product.id)}>Eliminar</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                            </AnimatePresence>
                         </tbody>
                     </table>
                 </div>

@@ -7,6 +7,7 @@ import {
   Filter,
   DollarSign,
   ShoppingBag,
+  Bot,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminData } from '@/hooks/useData';
@@ -20,6 +21,7 @@ import { AdminStoresView } from './AdminDashboard/AdminStoresView';
 import { AdminUsersView } from './AdminDashboard/AdminUsersView';
 import { SystemAnalyticsView } from './AdminDashboard/SystemAnalyticsView';
 import { PlanConfigView } from './AdminDashboard/PlanConfigView';
+import { BotConfigView } from './AdminDashboard/BotConfigView';
 
 export default function AdminDashboard() {
   const {
@@ -102,6 +104,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="subscriptions" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><CreditCard className="h-4 w-4 mr-2" />Suscripciones</TabsTrigger>
           <TabsTrigger value="stores" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Store className="h-4 w-4 mr-2" />Tiendas</TabsTrigger>
           <TabsTrigger value="users" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Users className="h-4 w-4 mr-2" />Usuarios</TabsTrigger>
+          <TabsTrigger value="bot" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><Bot className="h-4 w-4 mr-2" />Cerebro AI</TabsTrigger>
           <TabsTrigger value="analytics" className="flex-none sm:flex-1 rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md px-4 sm:px-3 text-xs sm:text-sm"><TrendingUp className="h-4 w-4 mr-2" />Analíticas</TabsTrigger>
         </TabsList>
 
@@ -138,6 +141,10 @@ export default function AdminDashboard() {
             updateUserStatus={updateUserStatus}
             deleteUser={deleteUser}
           />
+        </TabsContent>
+
+        <TabsContent value="bot">
+          <BotConfigView />
         </TabsContent>
 
         <TabsContent value="analytics">
