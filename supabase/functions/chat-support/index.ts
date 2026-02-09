@@ -95,20 +95,27 @@ Deno.serve(async (req) => {
         const { name, email, phone, subject } = call.args;
 
         // Ejecutamos la notificación por Telegram
-        const botToken = settingsMap['telegram_bot_token'];
-        const chatId = settingsMap['telegram_chat_id'];
+        const botToken = settingsMap['telegram_bot_token']?.trim();
+        const chatId = settingsMap['telegram_chat_id']?.trim();
+
+        console.log("Notifying support via Telegram:", {
+          hasToken: !!botToken,
+          chatId: chatId,
+          name,
+          email
+        });
 
         let telegramResult = "success";
         if (botToken && chatId) {
           const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-          const text = `🚀 *Nuevo Lead desde YUPAY*
-          
-👤 *Nombre:* ${name}
-📧 *Email:* ${email}
-📞 *Teléfono:* ${phone}
-📝 *Asunto:* ${subject}
-          
-_Enviado desde el Asistente AI_`;
+
+          // Usamos HTML para evitar errores de parseo con caracteres especiales de Markdown
+          const text = `🚀 <b>Nuevo Lead desde YUPAY</b>\n\n` +
+            `👤 <b>Nombre:</b> ${name}\n` +
+            `📧 <b>Email:</b> ${email}\n` +
+            `📞 <b>Teléfono:</b> ${phone}\n` +
+            `📝 <b>Asunto:</b> ${subject}\n\n` +
+            `<i>Enviado desde el Asistente AI</i>`;
 
           try {
             const tgResp = await fetch(telegramUrl, {
@@ -117,15 +124,21 @@ _Enviado desde el Asistente AI_`;
               body: JSON.stringify({
                 chat_id: chatId,
                 text: text,
-                parse_mode: "Markdown"
+                parse_mode: "HTML"
               })
             });
-            if (!tgResp.ok) telegramResult = "error-telegram-api";
+
+            if (!tgResp.ok) {
+              const errorData = await tgResp.text();
+              console.error("Telegram API Error:", errorData);
+              telegramResult = "error-telegram-api";
+            }
           } catch (e) {
-            console.error("Telegram send error:", e);
+            console.error("Telegram network error:", e);
             telegramResult = "error-network";
           }
         } else {
+          console.warn("Missing Telegram configuration (token or chat_id)");
           telegramResult = "error-missing-config";
         }
 
@@ -136,7 +149,7 @@ _Enviado desde el Asistente AI_`;
           parts: [{
             functionResponse: {
               name: "notify_support",
-              response: { content: telegramResult === "success" ? "Notificación enviada con éxito" : "Error al enviar notificación" }
+              response: { content: telegramResult === "success" ? "Notificación enviada con éxito" : `Error al enviar notificación (${telegramResult})` }
             }
           } as any]
         });
