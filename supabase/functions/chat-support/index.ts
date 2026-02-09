@@ -129,9 +129,9 @@ Deno.serve(async (req) => {
             });
 
             if (!tgResp.ok) {
-              const errorData = await tgResp.text();
+              const errorData: any = await tgResp.json();
               console.error("Telegram API Error:", errorData);
-              telegramResult = "error-telegram-api";
+              telegramResult = `error-telegram: ${errorData.description || JSON.stringify(errorData)}`;
             }
           } catch (e) {
             console.error("Telegram network error:", e);
