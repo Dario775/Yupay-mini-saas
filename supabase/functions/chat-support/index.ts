@@ -22,58 +22,129 @@ Deno.serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch dynamic prompt from database
-    const { data: settings, error: dbError } = await supabase
+    // Fetch all settings at once for efficiency
+    const { data: allSettings, error: dbError } = await supabase
       .from('platform_settings')
-      .select('value')
-      .eq('key', 'ai_support_prompt')
-      .single();
+      .select('key, value');
 
-    if (dbError) {
-      console.warn("Error fetching dynamic prompt, using fallback:", dbError);
-    }
+    if (dbError) console.warn("Error fetching settings:", dbError);
 
-    const fallbackPrompt = `
-      Eres el Asistente de YUPAY. Ayudas a comercios y clientes.
-      Planes: Gratis (10 productos), Básico ($29,000 ARS), Pro ($79,000 ARS).
-      Contacto: soporte@yupay.app.
-      Reglas: Sé amigable, usa emojis 🇦🇷 y responde en español.
+    const settingsMap = Object.fromEntries(
+      (allSettings || []).map((s: { key: string; value: string }) => [s.key, s.value])
+    );
+
+    const systemPrompt = settingsMap['ai_support_prompt'] || `
+      Eres el Asistente de YUPAY. Solo respondes dudas sobre esta plataforma.
+      Planes: Gratis ($0), Básico ($29,000 ARS), Pro ($79,000 ARS).
+      Reglas: Sé amigable, breve, usa emojis 🇦🇷 y NO respondas nada que no sea de Yupay.
     `;
 
-    const systemPrompt = settings?.value || fallbackPrompt;
+    // OPTIMIZACIÓN: Solo enviamos los últimos 6 mensajes para ahorrar tokens de contexto
+    const history = messages.slice(-6);
 
-    // Tomamos el último mensaje del usuario
-    const lastUserMessage = messages[messages.length - 1].content;
+    // GUARDRAILS: Instrucción de seguridad para evitar mal uso del bot
+    const guardrail = "\n\nIMPORTANTE: Solo responde sobre YUPAY. Si el usuario desea contactar con soporte o un humano, DEBES usar la herramienta 'notify_support' una vez que tengas su Nombre, Correo, Teléfono y Motivo.";
 
-    // Usamos el modelo ultra-lite y económico sugerido por el usuario
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { role: "user", parts: [{ text: systemPrompt + "\n\nUsuario dice: " + lastUserMessage }] }
-        ],
-        generationConfig: {
-          maxOutputTokens: 800,
-          temperature: 0.7,
+    // Herramienta para capturar leads
+    const tools = [{
+      function_declarations: [{
+        name: "notify_support",
+        description: "Envía una notificación a soporte con los datos del usuario para que lo contacten.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING", description: "Nombre del usuario" },
+            email: { type: "STRING", description: "Correo electrónico" },
+            phone: { type: "STRING", description: "Teléfono de contacto" },
+            subject: { type: "STRING", description: "Motivo de la consulta" }
+          },
+          required: ["name", "email", "phone", "subject"]
         }
-      }),
-    });
+      }]
+    }];
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Google AI Error:", data);
-      throw new Error(data.error?.message || "Error de comunicación con Google AI");
+    async function callGemini(contents: any, toolsList: any) {
+      const resp = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          tools: toolsList,
+          generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+        }),
+      });
+      return await resp.json();
     }
 
-    const aiText = data.candidates[0].content.parts[0].text;
+    let contents = [
+      {
+        role: "user",
+        parts: [{ text: systemPrompt + guardrail + "\n\nConversación:\n" + history.map((m: any) => `${m.role}: ${m.content}`).join("\n") }]
+      }
+    ];
 
-    return new Response(JSON.stringify({ response: aiText }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    let data = await callGemini(contents, tools);
+
+    // Si la IA decide llamar a la función de notificación
+    if (data.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
+      const call = data.candidates[0].content.parts[0].functionCall;
+
+      if (call.name === "notify_support") {
+        const { name, email, phone, subject } = call.args;
+
+        // Ejecutamos la notificación por Telegram
+        const botToken = settingsMap['telegram_bot_token'];
+        const chatId = settingsMap['telegram_chat_id'];
+
+        let telegramResult = "success";
+        if (botToken && chatId) {
+          const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+          const text = `🚀 *Nuevo Lead desde YUPAY*
+          
+👤 *Nombre:* ${name}
+📧 *Email:* ${email}
+📞 *Teléfono:* ${phone}
+📝 *Asunto:* ${subject}
+          
+_Enviado desde el Asistente AI_`;
+
+          try {
+            const tgResp = await fetch(telegramUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: text,
+                parse_mode: "Markdown"
+              })
+            });
+            if (!tgResp.ok) telegramResult = "error-telegram-api";
+          } catch (e) {
+            console.error("Telegram send error:", e);
+            telegramResult = "error-network";
+          }
+        } else {
+          telegramResult = "error-missing-config";
+        }
+
+        // Devolvemos el resultado a la IA para que le confirme al usuario
+        contents.push(data.candidates[0].content);
+        contents.push({
+          role: "function",
+          parts: [{
+            functionResponse: {
+              name: "notify_support",
+              response: { content: telegramResult === "success" ? "Notificación enviada con éxito" : "Error al enviar notificación" }
+            }
+          } as any]
+        });
+
+        // Llamamos de nuevo a Gemini para que genere la respuesta final al usuario
+        data = await callGemini(contents, tools);
+      }
+    }
   } catch (error) {
     console.error("Edge Function Crash:", error);
     return new Response(JSON.stringify({ error: error.message }), {

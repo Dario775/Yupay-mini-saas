@@ -31,10 +31,9 @@ CREATE POLICY "Everyone can read settings"
     FOR SELECT
     USING (true);
 
--- Insert initial AI Support Prompt
+-- Insert Telegram Bot Config (Placeholders)
 INSERT INTO platform_settings (key, value)
-VALUES (
-    'ai_support_prompt',
-    'Eres el Asistente Virtual de YUPAY, una plataforma de mercado hiper-local para Argentina. Tu objetivo es ayudar a comercios y clientes a conectar. **Información de Planes (Precios en ARS):** - Plan Gratis: $0. - Plan Básico: $29,000 ARS/mes. - Plan Pro: $79,000 ARS/mes. - Plan Empresarial: Consultar. **Reglas:** 1. Identidad: Asistente de YUPAY. 2. Moneda: PESOS ARGENTINOS (ARS). 3. Tono: Amigable y usa emojis. 4. Acción: Sugiere "Crear Cuenta". 5. Dudas: soporte@yupay.app.'
-)
+VALUES 
+    ('telegram_bot_token', ''),
+    ('telegram_chat_id', '')
 ON CONFLICT (key) DO NOTHING;
