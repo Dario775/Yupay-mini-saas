@@ -49,7 +49,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Product, Order, GeoLocation, FlashOffer } from '@/types';
 import { toast } from 'sonner';
 import { searchAddresses, getCurrentPosition, reverseGeocode, formatDistance, calculateDistance } from '@/lib/geo';
-import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
+import { generateWhatsAppLink, formatOrderMessage, formatProductShareMessage } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/format';
 
 
@@ -260,6 +260,23 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
     }
   };
 
+  const handleShareProduct = (product: Product) => {
+    const store = stores.find(s => s.id === product.storeId);
+    if (!store) return;
+
+    // In local dev we use the current URL
+    const url = window.location.href;
+    const message = formatProductShareMessage({ name: product.name, price: product.price }, store.name, url);
+    const link = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(link, '_blank');
+    toast.info('Abriendo WhatsApp para compartir...');
+  };
+
+  // Attach to window just in case for deep components
+  useEffect(() => {
+    (window as any).handleGlobalShare = handleShareProduct;
+  }, [stores]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 transition-colors duration-300">
       <Tabs value={activeTab} className="w-full">
@@ -281,6 +298,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
               handleToggleFavorite={handleToggleFavorite}
               setSelectedProduct={setSelectedProduct}
               userLocation={userLocation}
+              onShareProduct={handleShareProduct}
             />
 
           </TabsContent>
@@ -333,6 +351,7 @@ export default function ClientDashboard({ activeTab = 'shop' }: ClientDashboardP
         toggleFavorite={handleToggleFavorite}
         isFavorite={selectedProduct ? isFavorite(selectedProduct.id) : false}
         stores={stores}
+        onShare={handleShareProduct}
       />
 
     </div>

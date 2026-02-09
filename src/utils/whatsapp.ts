@@ -61,3 +61,24 @@ Tu pedido *#${orderId}* en *${storeName}* ${statusText}.
 Cualquier consulta estamos a tu disposición.
 Saludos!`;
 };
+/**
+ * Formats a product sharing message for WhatsApp.
+ * @param product The product to share
+ * @param storeName The name of the store
+ * @param url The public URL of the product/store (optional)
+ * @returns A formatted string
+ */
+export const formatProductShareMessage = (product: { name: string; price: number }, storeName: string, url?: string): string => {
+    const priceFormatted = `$${product.price.toLocaleString('es-AR')}`;
+    let message = `¡Mirá lo que encontré en *${storeName}*! 😍\n\n`;
+    message += `*${product.name}*\n`;
+    message += `💰 *Precio:* ${priceFormatted}\n\n`;
+
+    if (url) {
+        message += `Link: ${url}`;
+    } else {
+        message += `Lo encontrás en Yupay! 🚀`;
+    }
+
+    return message;
+};

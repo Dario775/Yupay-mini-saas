@@ -1,5 +1,5 @@
 
-import { Zap } from 'lucide-react';
+import { Zap, MessageCircle, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/utils/format';
 import type { Product, FlashOffer } from '@/types';
@@ -10,13 +10,15 @@ interface FlashOfferCardProps {
     offer?: FlashOffer;
     onAddToCart: (product: Product) => void;
     onView?: (product: Product) => void;
+    onShare?: (product: Product) => void;
 }
 
 export function FlashOfferCard({
     product,
     offer,
     onAddToCart,
-    onView
+    onView,
+    onShare
 }: FlashOfferCardProps) {
     const discountedPrice = product.price * (1 - (offer?.discountValue || 0) / 100);
 
@@ -39,9 +41,21 @@ export function FlashOfferCard({
                     <ProductTimer endDate={offer?.endDate || new Date()} className="text-[10px] font-mono font-bold text-white tracking-wide" />
                 </div>
 
-                {/* Discount Badge */}
-                <div className="absolute top-2 right-2 bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">
-                    -{offer?.discountValue || 20}%
+                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                    <div className="bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                        -{offer?.discountValue || 20}%
+                    </div>
+                    {/* Share Button for Flash Offer */}
+                    <Button
+                        size="icon"
+                        className="h-7 w-7 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white shadow-sm border border-gray-100 dark:border-gray-700 z-50 transition-transform active:scale-90"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onShare?.(product);
+                        }}
+                    >
+                        <Share2 className="h-3.5 w-3.5" />
+                    </Button>
                 </div>
 
                 {/* Price Overlay */}

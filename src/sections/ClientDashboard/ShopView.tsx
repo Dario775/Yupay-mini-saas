@@ -22,6 +22,7 @@ interface ShopViewProps {
     handleToggleFavorite: (id: string) => void;
     setSelectedProduct: (product: Product | null) => void;
     userLocation: GeoLocation | null;
+    onShareProduct: (product: Product) => void;
     className?: string;
 }
 
@@ -38,6 +39,7 @@ export function ShopView({
     handleToggleFavorite,
     setSelectedProduct,
     userLocation,
+    onShareProduct,
     className
 }: ShopViewProps) {
 
@@ -98,6 +100,7 @@ export function ShopView({
                                         offer={offer}
                                         onAddToCart={addToCart}
                                         onView={setSelectedProduct}
+                                        onShare={onShareProduct}
                                     />
                                 );
                             })}
@@ -121,8 +124,8 @@ export function ShopView({
                 ))}
             </div>
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Products Grid - 2 Columns on Mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-12">
                 {filteredProducts.map((product) => {
                     const productStore = stores.find(s => s.id === product.storeId);
                     let distance: number | undefined;
@@ -138,6 +141,7 @@ export function ShopView({
                             isFavorite={isFavorite(product.id)}
                             onToggleFavorite={handleToggleFavorite}
                             onView={setSelectedProduct}
+                            onShare={onShareProduct}
                             distance={distance}
                         />
                     );

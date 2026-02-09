@@ -13,7 +13,9 @@ import {
     Filter,
     Zap,
     ArrowLeft,
-    Loader2
+    Loader2,
+    Share2,
+    MessageCircle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,67 +26,94 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { useClientData } from '@/hooks/useData';
 import type { Product, Order } from '@/types';
-import { generateWhatsAppLink, formatOrderMessage } from '@/utils/whatsapp';
+import { generateWhatsAppLink, formatOrderMessage, formatProductShareMessage } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/format';
 
-// Reusing ProductCard component logic but simplified for this file
 function ProductCard({
     product,
     onAddToCart,
-    onView
+    onView,
+    onShare
 }: {
     product: Product;
     onAddToCart: (product: Product) => void;
     onView: (product: Product) => void;
+    onShare: (product: Product) => void;
 }) {
     const discountedPrice = product.isOnSale && product.discount
         ? product.price * (1 - product.discount / 100)
         : null;
 
     return (
-        <Card className="group relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl">
+        <Card className="group relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-500 rounded-[2rem] flex flex-col h-full">
+            {/* Image Container with Glass Effects */}
             <div
-                className="relative aspect-[4/3] bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer"
+                className="relative aspect-square sm:aspect-[4/3] bg-slate-50 dark:bg-slate-800/50 overflow-hidden cursor-pointer"
                 onClick={() => onView(product)}
             >
                 {product.images?.[0] ? (
                     <img
                         src={product.images[0]}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-200 dark:text-gray-700">
+                    <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-200 dark:text-slate-700 uppercase">
                         {product.name.charAt(0)}
                     </div>
                 )}
+
+                {/* Sale Badge */}
+                {product.isOnSale && (
+                    <div className="absolute top-3 left-3 px-2 py-1 bg-rose-500 text-white text-[10px] font-black italic rounded-lg shadow-lg shadow-rose-500/30 animate-pulse">
+                        -{product.discount}% OFF
+                    </div>
+                )}
+
+                {/* Premium Share Button - High Visibility Emerald */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onShare(product); }}
+                    className="absolute top-3 right-3 p-2.5 bg-emerald-500 text-white rounded-2xl shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 transition-all duration-300 z-50 border border-emerald-400"
+                    title="Compartir por WhatsApp"
+                >
+                    <MessageCircle className="h-4 w-4 fill-current" />
+                </button>
+
+                {/* Quick View Button on Hover */}
+                <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 bg-gradient-to-t from-black/60 to-transparent">
+                    <p className="text-white text-[10px] font-bold text-center tracking-widest uppercase opacity-80">Ver Detalles</p>
+                </div>
             </div>
 
-            <CardContent className="p-3 space-y-2">
-                <div>
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 leading-tight">{product.name}</h3>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">{product.category}</p>
+            <CardContent className="p-4 flex flex-col flex-1 gap-3">
+                <div className="flex-1">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400"></span>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{product.category}</p>
+                    </div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:text-violet-600 transition-colors uppercase tracking-tight">{product.name}</h3>
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-end justify-between pt-2">
                     <div className="flex flex-col">
                         {discountedPrice ? (
                             <>
-                                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">{formatPrice(discountedPrice)}</p>
-                                <p className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</p>
+                                <p className="text-lg font-black text-rose-600 dark:text-rose-400 leading-none">{formatPrice(discountedPrice)}</p>
+                                <p className="text-[10px] text-slate-400 line-through font-bold mt-1">{formatPrice(product.price)}</p>
                             </>
                         ) : (
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(product.price)}</p>
+                            <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{formatPrice(product.price)}</p>
                         )}
                     </div>
+
                     <Button
                         size="sm"
-                        className="h-7 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full gap-1"
+                        className="h-9 px-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-violet-600 dark:hover:bg-violet-500 hover:text-white transition-all duration-300 rounded-xl font-black text-[10px] uppercase tracking-widest gap-2 shadow-lg shadow-black/5"
                         onClick={(e) => { e.stopPropagation(); onAddToCart({ ...product, price: discountedPrice || product.price } as Product); }}
                         disabled={product.stock === 0}
                     >
-                        <Plus className="h-3 w-3" />
-                        Añadir
+                        <Plus className="h-3 w-3 stroke-[3]" />
+                        Agregar
                     </Button>
                 </div>
             </CardContent>
@@ -173,6 +202,16 @@ Quedo a la espera de su confirmación. Gracias!`;
         setIsCartOpen(false);
     };
 
+    const handleShareProduct = (product: Product) => {
+        const url = window.location.href; // In a real app we'd use a specific product link
+        const message = formatProductShareMessage(product, store.name, url);
+        // We use a general sharing if it's for friends, so no specific phone here usually
+        // But for WhatsApp we can open wa.me/ without phone or just use the sharing API
+        const link = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(link, '_blank');
+        toast.info('Abriendo WhatsApp para compartir...');
+    };
+
     if (!store) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
     return (
@@ -246,44 +285,140 @@ Quedo a la espera de su confirmación. Gracias!`;
                             product={product}
                             onAddToCart={addToCart}
                             onView={setSelectedProduct}
+                            onShare={(p) => handleShareProduct(p)}
                         />
                     ))}
                 </div>
             </main>
 
+            {/* Product Detail Dialog */}
+            <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+                <DialogContent className="max-w-2xl w-[95vw] rounded-[2.5rem] p-0 overflow-hidden dark:bg-gray-950 border-0 shadow-2xl">
+                    {selectedProduct && (
+                        <div className="flex flex-col md:flex-row h-full">
+                            {/* Image Section */}
+                            <div className="md:w-1/2 relative aspect-square md:aspect-auto bg-slate-100 dark:bg-slate-900">
+                                {selectedProduct.images?.[0] ? (
+                                    <img src={selectedProduct.images[0]} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-6xl font-black text-slate-200 dark:text-slate-800 uppercase">
+                                        {selectedProduct.name.charAt(0)}
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-4 left-4 bg-white/20 hover:bg-white/40 backdrop-blur-xl text-white rounded-full z-10"
+                                    onClick={() => setSelectedProduct(null)}
+                                >
+                                    <X className="h-5 w-5" />
+                                </Button>
+                            </div>
+
+                            {/* Info Section */}
+                            <div className="md:w-1/2 p-8 flex flex-col justify-between bg-white dark:bg-gray-950">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Badge className="bg-violet-600 text-white border-0 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                            {selectedProduct.category}
+                                        </Badge>
+                                        {selectedProduct.stock > 0 && (
+                                            <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-[10px] font-black uppercase tracking-widest">
+                                                En Stock
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4 leading-tight tracking-tighter uppercase italic">{selectedProduct.name}</h3>
+
+                                    <div className="space-y-4 mb-8">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                                            {selectedProduct.description || 'Este producto es parte de nuestra selección premium. Calidad garantizada y estilo único para tu día a día.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Precio Final</p>
+                                            <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{formatPrice(selectedProduct.price)}</p>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+                                            <Zap className="h-6 w-6 fill-current" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <Button
+                                            onClick={() => handleShareProduct(selectedProduct)}
+                                            variant="outline"
+                                            className="h-14 rounded-2xl border-2 border-green-500/20 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-500/10 font-black gap-3 text-xs uppercase tracking-widest group transition-all"
+                                        >
+                                            <div className="p-1.5 bg-green-500 text-white rounded-lg group-hover:scale-110 transition-transform">
+                                                <MessageCircle className="h-4 w-4 fill-current" />
+                                            </div>
+                                            Compartir
+                                        </Button>
+                                        <Button
+                                            onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                                            disabled={selectedProduct.stock === 0}
+                                            className="h-14 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-violet-600 dark:hover:bg-violet-500 hover:text-white font-black gap-3 text-xs uppercase tracking-widest shadow-xl shadow-black/10"
+                                        >
+                                            <Plus className="h-5 w-5 stroke-[3]" />
+                                            Lo quiero
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Cart Dialog */}
             <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-                <DialogContent className="max-w-md w-[95vw] rounded-3xl p-0 overflow-hidden dark:bg-gray-900 border-0">
-                    <div className="p-6 bg-violet-600">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                            <ShoppingCart className="h-5 w-5" />
-                            Tu Pedido
-                        </h3>
-                        <p className="text-violet-100 text-xs mt-1">{cartItemsCount} productos</p>
+                <DialogContent className="max-w-md w-[95vw] rounded-[2.5rem] p-0 overflow-hidden dark:bg-gray-950 border-0 shadow-2xl">
+                    <div className="p-8 bg-gradient-to-br from-violet-600 to-indigo-700">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-2xl font-black text-white flex items-center gap-3 italic uppercase tracking-tighter">
+                                <ShoppingBag className="h-6 w-6" />
+                                Tu Carrito
+                            </h3>
+                            <Button variant="ghost" size="icon" className="text-white/60 hover:text-white" onClick={() => setIsCartOpen(false)}>
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <p className="text-violet-100 text-xs font-bold opacity-80 uppercase tracking-widest">{cartItemsCount} artículos seleccionados</p>
                     </div>
 
-                    <div className="p-6 bg-white dark:bg-gray-900">
-                        <ScrollArea className="max-h-[50vh] pr-4">
+                    <div className="p-8 bg-white dark:bg-gray-950">
+                        <ScrollArea className="max-h-[40vh] pr-4">
                             {cart.length === 0 ? (
-                                <div className="text-center py-12 text-gray-400">
-                                    <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                                    <p className="text-sm">Tu carrito está vacío</p>
+                                <div className="text-center py-16 text-slate-300 dark:text-slate-700">
+                                    <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-900 shadow-inner">
+                                        <ShoppingCart className="h-8 w-8 opacity-20" />
+                                    </div>
+                                    <p className="text-sm font-black uppercase tracking-widest">Tu carrito está vacío</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     {cart.map(({ product, quantity }) => (
-                                        <div key={product.id} className="flex items-center gap-3">
-                                            <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden flex-shrink-0">
-                                                {product.images?.[0] ? <img src={product.images[0]} className="w-full h-full object-cover" /> : null}
+                                        <div key={product.id} className="flex items-center gap-4 group">
+                                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 dark:border-white/5 transition-transform group-hover:scale-105">
+                                                {product.images?.[0] ? <img src={product.images[0]} className="w-full h-full object-cover" /> : (
+                                                    <div className="w-full h-full flex items-center justify-center font-bold text-slate-300 uppercase">{product.name.charAt(0)}</div>
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">{product.name}</h4>
-                                                <p className="text-violet-600 font-bold text-sm">{formatPrice(product.price)}</p>
+                                                <h4 className="text-[11px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">{product.name}</h4>
+                                                <p className="text-violet-600 dark:text-violet-400 font-black text-base">{formatPrice(product.price)}</p>
                                             </div>
-                                            <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-full px-2 py-1">
-                                                <button onClick={() => updateQuantity(product.id, -1)} className="p-1 hover:text-red-500 transition-colors"><Minus className="h-3 w-3" /></button>
-                                                <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                                                <button onClick={() => updateQuantity(product.id, 1)} className="p-1 hover:text-green-500 transition-colors"><Plus className="h-3 w-3" /></button>
+                                            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/80 rounded-2xl px-3 py-2 border border-slate-100 dark:border-white/5">
+                                                <button onClick={() => updateQuantity(product.id, -1)} className="p-1 hover:text-rose-500 transition-colors"><Minus className="h-3 w-3 stroke-[3]" /></button>
+                                                <span className="text-xs font-black min-w-[20px] text-center">{quantity}</span>
+                                                <button onClick={() => updateQuantity(product.id, 1)} className="p-1 hover:text-emerald-500 transition-colors"><Plus className="h-3 w-3 stroke-[3]" /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -292,19 +427,19 @@ Quedo a la espera de su confirmación. Gracias!`;
                         </ScrollArea>
 
                         {cart.length > 0 && (
-                            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+                            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-white/5">
                                 {/* Payment Method Selector */}
                                 {activePaymentMethods.length > 0 && (
-                                    <div className="mb-4 space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Método de Pago</label>
+                                    <div className="mb-6 space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">¿Cómo preferís pagar?</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {activePaymentMethods.map(pm => (
                                                 <button
                                                     key={pm.id}
                                                     onClick={() => setSelectedPaymentMethod(pm.id)}
-                                                    className={`p-2 rounded-lg border text-xs font-medium transition-all ${selectedPaymentMethod === pm.id
-                                                        ? 'border-violet-600 bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-500'
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                                    className={`px-4 py-3 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedPaymentMethod === pm.id
+                                                        ? 'border-violet-600 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500'
+                                                        : 'border-slate-100 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-white/10'
                                                         }`}
                                                 >
                                                     {pm.name}
@@ -314,13 +449,18 @@ Quedo a la espera de su confirmación. Gracias!`;
                                     </div>
                                 )}
 
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-gray-500">Total a pagar</span>
-                                    <span className="text-2xl font-black text-gray-900 dark:text-white">{formatPrice(cartTotal)}</span>
+                                <div className="flex justify-between items-end mb-8 px-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Total del Pedido</span>
+                                        <span className="text-sm text-slate-500 italic">Precios incluyen IVA</span>
+                                    </div>
+                                    <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{formatPrice(cartTotal)}</span>
                                 </div>
-                                <Button onClick={handleCheckout} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-green-500/20">
-                                    Enviar Pedido por WhatsApp
-                                    <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+                                <Button onClick={handleCheckout} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-green-600 dark:hover:bg-green-500 hover:text-white font-black h-16 rounded-[1.5rem] shadow-2xl shadow-black/10 transition-all duration-300 text-xs uppercase tracking-[0.2em] group gap-4">
+                                    Confirmar Pedido WhatsApp
+                                    <div className="p-1.5 bg-white/20 dark:bg-black/10 rounded-lg group-hover:scale-110 transition-transform">
+                                        <MessageCircle className="h-4 w-4 fill-current" />
+                                    </div>
                                 </Button>
                             </div>
                         )}

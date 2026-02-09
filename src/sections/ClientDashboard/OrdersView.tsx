@@ -58,37 +58,41 @@ export function OrdersView({ orders, onCancelOrder }: OrdersViewProps) {
                     <p className="text-gray-500 dark:text-gray-400">Cuando realices una compra, aparecerá aquí</p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {orders.map((order) => (
-                        <Card key={order.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl transition-all active:scale-[0.98]">
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between mb-3">
+                        <Card key={order.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden rounded-2xl transition-all hover:shadow-md cursor-pointer group flex flex-col h-full" onClick={() => setSelectedOrder(order)}>
+                            <CardContent className="p-5 flex flex-col h-full">
+                                <div className="flex items-start justify-between mb-4">
                                     <div>
-                                        <p className="text-xs font-bold text-gray-500 mb-1">#{order.id.slice(0, 8)}</p>
+                                        <Badge variant="outline" className="mb-2 text-xs font-mono text-gray-500 border-gray-200 dark:border-gray-700">
+                                            #{order.id.slice(0, 8)}
+                                        </Badge>
                                         <p className="text-sm font-bold dark:text-white">{new Date(order.createdAt).toLocaleDateString()}</p>
                                     </div>
                                     <OrderStatusBadge status={order.status} />
                                 </div>
-                                <div className="flex items-center justify-between mt-4">
+
+                                <div className="mt-auto pt-4 border-t border-dashed border-gray-100 dark:border-gray-800 flex items-center justify-between">
                                     <div>
-                                        <p className="text-[10px] text-gray-500 uppercase font-bold">Total</p>
-                                        <p className="text-lg font-bold text-violet-600">{formatPrice(order.total)}</p>
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total</p>
+                                        <p className="text-xl font-black text-gray-900 dark:text-white">{formatPrice(order.total)}</p>
                                     </div>
                                     <div className="flex gap-2">
                                         {order.status === 'pendiente' && (
                                             <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="text-xs h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                                                 onClick={(e) => { e.stopPropagation(); setShowCancelConfirm(order.id); }}
+                                                title="Cancelar pedido"
                                             >
-                                                Cancelar
+                                                <XCircle className="h-5 w-5" />
                                             </Button>
                                         )}
                                         <Button
                                             size="sm"
-                                            className="text-xs h-8 rounded-lg"
-                                            onClick={() => setSelectedOrder(order)}
+                                            variant="secondary"
+                                            className="text-xs h-8 rounded-lg group-hover:bg-violet-100 dark:group-hover:bg-violet-900/20 group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors"
                                         >
                                             Ver Detalle
                                         </Button>

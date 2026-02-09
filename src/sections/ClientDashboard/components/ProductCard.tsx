@@ -1,5 +1,5 @@
 
-import { ShoppingCart, Heart, MapPin, Zap } from 'lucide-react';
+import { ShoppingCart, Heart, MapPin, Zap, MessageCircle, Share2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ interface ProductCardProps {
     isFavorite?: boolean;
     onToggleFavorite?: (id: string) => void;
     onView?: (product: Product) => void;
+    onShare?: (product: Product) => void;
     distance?: number;
     flashOffer?: FlashOffer;
     compact?: boolean;
@@ -24,6 +25,7 @@ export function ProductCard({
     isFavorite = false,
     onToggleFavorite,
     onView,
+    onShare,
     distance,
     flashOffer,
     compact = false
@@ -51,24 +53,36 @@ export function ProductCard({
                 </div>
             )}
 
-            {/* Actions Overlay */}
-            <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {onToggleFavorite && (
-                    <Button
-                        size="icon"
-                        className="h-8 w-8 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-700 shadow-sm backdrop-blur-sm"
-                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
-                    >
-                        <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-                    </Button>
-                )}
-            </div>
-
-            {/* Image */}
+            {/* Content / Image Container */}
             <div
                 className="relative aspect-square bg-gray-50 dark:bg-gray-800 overflow-hidden cursor-pointer p-4"
                 onClick={() => onView?.(product)}
             >
+                {/* Actions Overlay - Moved inside and increased Z-index */}
+                <div className="absolute top-2 right-2 z-50 flex flex-col gap-2">
+                    {onToggleFavorite && (
+                        <Button
+                            size="icon"
+                            className="h-8 w-8 rounded-full bg-white dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 shadow-md border border-gray-100 dark:border-gray-700 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
+                        >
+                            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                        </Button>
+                    )}
+                    {/* Share Button - Minimalist */}
+                    <Button
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-white dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 shadow-md border border-gray-100 dark:border-gray-700 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onShare?.(product);
+                        }}
+                        title="Compartir producto"
+                    >
+                        <Share2 className="h-4 w-4 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+                    </Button>
+                </div>
+
                 {/* Secondary Image (Hover) */}
                 {product.images?.[1] && (
                     <img

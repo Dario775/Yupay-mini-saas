@@ -76,7 +76,7 @@ export function SupportChat() {
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden z-50 font-sans"
+                        className="fixed bottom-36 md:bottom-24 right-4 md:right-6 w-[90vw] md:w-96 h-[500px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden z-50 font-sans"
                     >
                         {/* Header */}
                         <div className="bg-violet-600 p-4 flex items-center justify-between text-white shadow-md">
@@ -155,7 +155,7 @@ export function SupportChat() {
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-violet-600 hover:bg-violet-700 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-colors shadow-violet-500/30"
+                className="fixed bottom-20 md:bottom-6 right-4 md:right-6 w-12 h-12 md:w-14 md:h-14 bg-violet-600 hover:bg-violet-700 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-colors shadow-violet-500/30"
                 aria-label="Abrir chat de soporte"
             >
                 <AnimatePresence mode="wait">
