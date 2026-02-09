@@ -145,6 +145,13 @@ _Enviado desde el Asistente AI_`;
         data = await callGemini(contents, tools);
       }
     }
+
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "He recibido tus datos y los he enviado a soporte. Pronto se comunicarán contigo. 🚀";
+
+    return new Response(JSON.stringify({ response: aiText }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Edge Function Crash:", error);
     return new Response(JSON.stringify({ error: error.message }), {
